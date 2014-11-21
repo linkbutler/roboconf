@@ -42,6 +42,7 @@ import net.roboconf.messaging.messages.from_agent_to_agent.MsgCmdImportRequest;
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceChanged;
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceRemoved;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceAdd;
+import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceBackup;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceDeploy;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceRemove;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceRestore;
@@ -126,6 +127,9 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 
 			else if( message instanceof MsgCmdInstanceRestore )
 				processMsgInstanceRestore((MsgCmdInstanceRestore) message );
+			
+			else if( message instanceof MsgCmdInstanceBackup )
+				processMsgInstanceBackup((MsgCmdInstanceBackup) message );	// Linh Manh Pham
 
 			else
 				this.logger.warning( getName() + " got an undetermined message to process. " + message.getClass().getName());
@@ -151,7 +155,56 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 			this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceChanged( this.appName, i ));
 	}
 
+	/**
+	 * Backup an instance - a part of migration process - Linh Manh Pham.
+	 * @param message the initial request
+	 * @return true if an backup was made, false otherwise
+	 * @throws IOException if an error occurred with the messaging
+	 */
+	boolean processMsgInstanceBackup( MsgCmdInstanceBackup msg ) throws IOException {
+		boolean result = false;
 
+		String instancePath = msg.getInstancePath();
+		Instance instance = InstanceHelpers.findInstanceByPath( this.rootInstance, msg.getInstancePath());
+		PluginInterface plugin;
+		
+		plugin = this.pluginManager.findPlugin( instance, this.logger );
+		// Cannot find the instance
+		if( instance == null ) {
+			this.logger.severe( "No instance matched " + msg.getInstancePath() + " on the agent. Request to backup it is dropped." );
+		}
+
+		// If it is never deployed or exist problem, do nothing
+		else if( instance.getStatus() == InstanceStatus.NOT_DEPLOYED || instance.getStatus() == InstanceStatus.PROBLEM ) {
+			this.logger.info( "Instance " + instancePath + " is never deployed. Backup request is dropped." );
+		}
+
+		// Is it the root instance to backup? Only can backup non-root instances (software).
+		else if( instance.getParent() == null ) {
+			this.logger.severe( "Backing up the root instance is impossible." );
+		}
+
+		// Do we have the right plug-in? Only bash support backup so far...
+		else if( plugin == null || !"bash".equals(plugin.getPluginName())) {
+			this.logger.severe( "No plug-in was found and only bash is supported to do backup " + msg.getInstancePath() + "." );
+		}
+
+		// Otherwise, process it
+		else {
+
+			// Undeploy the initial instance
+			try {
+				plugin.backup( instance );
+				result = true;
+
+			} catch( Exception e ) {
+				this.logger.severe( "An error occured while backing up" + msg.getInstancePath());
+				this.logger.finest( Utils.writeException( e ));
+			}
+		}
+
+		return result;
+	}
 
 	/**
 	 * Adds an instance to the local model.

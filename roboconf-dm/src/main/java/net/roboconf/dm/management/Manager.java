@@ -52,6 +52,7 @@ import net.roboconf.messaging.client.IDmClient;
 import net.roboconf.messaging.client.MessageServerClientFactory;
 import net.roboconf.messaging.messages.Message;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceAdd;
+import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceBackup;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceDeploy;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceRemove;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceRestore;
@@ -493,7 +494,26 @@ public final class Manager {
 			this.logger.fine( "Undeploy action for " + instancePath + " is cancelled in " + ma.getName() + "." );
 		}
 	}
+	
+	/**
+	 * Backup (first step of migration) an instance. //Linh Manh Pham
+	 * @param ma the managed application
+	 * @param instance the instance to backup (not null)
+	 * @throws IOException if an error occurred with the messaging
+	 */
+	public void backup( ManagedApplication ma, Instance instance ) throws IOException {
 
+		String instancePath = InstanceHelpers.computeInstancePath( instance );
+		this.logger.fine( "Backup " + instancePath + " in " + ma.getName() + "..." );
+		if( instance.getParent() != null ) {
+			MsgCmdInstanceBackup message = new MsgCmdInstanceBackup( instance );
+			send( ma, message, instance );
+			this.logger.fine( "A message was (or will be) sent to the agent to backup " + instancePath + " in " + ma.getName() + "." );
+
+		} else {
+			this.logger.fine( "Backup action for " + instancePath + " is cancelled in " + ma.getName() + "." );
+		}
+	}
 
 	/**
 	 * Deploys a root instance.

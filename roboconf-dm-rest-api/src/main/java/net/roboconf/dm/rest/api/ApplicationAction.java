@@ -32,7 +32,7 @@ package net.roboconf.dm.rest.api;
  * @author Vincent Zurczak - Linagora
  */
 public enum ApplicationAction {
-	DEPLOY, UNDEPLOY, START, STOP, REMOVE;
+	DEPLOY, UNDEPLOY, START, STOP, REMOVE, BACKUP, RESTORE; //Linh Manh Pham
 
 	public static ApplicationAction whichAction( String s ) {
 

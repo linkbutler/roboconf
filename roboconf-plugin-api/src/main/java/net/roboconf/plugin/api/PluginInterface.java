@@ -72,6 +72,18 @@ public interface PluginInterface {
 	 * @param instance the instance to undeploy
 	 */
 	void undeploy( Instance instance ) throws PluginException;
+	
+	/**
+	 * Backup an instance.
+	 * @param instance the instance to backup
+	 */
+	void backup( Instance instance ) throws PluginException;
+	
+	/**
+	 * Restore an instance.
+	 * @param instance the instance to restore
+	 */
+	void restore( Instance instance ) throws PluginException;
 
 
 	/**

@@ -100,4 +100,17 @@ public class PluginLogger implements PluginInterface {
 		String name = instance != null ? instance.getName() : null;
 		this.logger.info( this.agentName + " is undeploying instance " + name + "." );
 	}
+	
+	@Override
+	public void backup( Instance instance ) throws PluginException {
+		String name = instance != null ? instance.getName() : null;
+		this.logger.info( this.agentName + " is backing up instance " + name + "." );
+	}
+
+
+	@Override
+	public void restore( Instance instance ) throws PluginException {
+		String name = instance != null ? instance.getName() : null;
+		this.logger.info( this.agentName + " is restoring instance " + name + "." );
+	}
 }

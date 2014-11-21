@@ -235,8 +235,15 @@ public class PluginPuppet implements PluginInterface {
 			this.logger.finest( Utils.writeException( e ));
 		}
 	}
-
-
+	
+	@Override
+	public void backup( Instance instance ) throws PluginException {
+	}
+	
+	@Override
+	public void restore( Instance instance ) throws PluginException {
+	}
+	
 	/**
 	 * Executes a Puppet command to install the required modules.
 	 * @param instance the instance

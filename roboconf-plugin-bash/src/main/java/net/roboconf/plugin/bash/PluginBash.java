@@ -176,6 +176,26 @@ public class PluginBash implements PluginInterface {
 			throw new PluginException( e );
 		}
     }
+    
+    @Override
+    public void backup( Instance instance ) throws PluginException {
+    	this.logger.fine( this.agentName + " is backing up instance " + instance.getName());
+    	if( this.executionLevel == ExecutionLevel.LOG )
+			return;
+
+        try {
+			prepareAndExecuteCommand( "backup", instance, null, null );
+
+		} catch( Exception e ) {
+			throw new PluginException( e );
+		}
+    }
+    	
+    @Override
+    public void restore( Instance instance ) throws PluginException {
+
+    	
+    }
 
 
     private void prepareAndExecuteCommand(String action, Instance instance, Import importChanged, InstanceStatus statusChanged)

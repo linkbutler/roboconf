@@ -96,6 +96,10 @@ public class ApplicationWs implements IApplicationWs {
 				Manager.INSTANCE.removeInstance( ma, instance );
 				response = Response.ok().build();
 
+			} else if( action == ApplicationAction.BACKUP ) {	// Linh Manh Pham
+				Manager.INSTANCE.backup( ma, instance );
+				response = Response.ok().build();
+
 			} else {
 				response = Response.status( Status.BAD_REQUEST ).entity( "Invalid action: " + actionAS ).build();
 			}
