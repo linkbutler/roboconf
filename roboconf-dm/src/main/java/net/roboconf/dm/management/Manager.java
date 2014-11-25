@@ -519,14 +519,15 @@ public final class Manager {
 	 * Restore (second step of migration) an instance. //Linh Manh Pham
 	 * @param ma the managed application
 	 * @param instance the instance to be restored (not null)
+	 * @param oldInstance the old instance which has just backed up (not null)
 	 * @throws IOException if an error occurred with the messaging
 	 */
-	public void restore( ManagedApplication ma, Instance instance ) throws IOException {
+	public void restore( ManagedApplication ma, Instance instance, String oldInstancePath ) throws IOException {
 
 		String instancePath = InstanceHelpers.computeInstancePath( instance );
 		this.logger.fine( "Restore " + instancePath + " in " + ma.getName() + "..." );
 		if( instance.getParent() != null ) {
-			MsgCmdInstanceRestore message = new MsgCmdInstanceRestore( instance );
+			MsgCmdInstanceRestore message = new MsgCmdInstanceRestore( instance, oldInstancePath );
 			send( ma, message, instance );
 			this.logger.fine( "A message was (or will be) sent to the agent to restore " + instancePath + " in " + ma.getName() + "." );
 

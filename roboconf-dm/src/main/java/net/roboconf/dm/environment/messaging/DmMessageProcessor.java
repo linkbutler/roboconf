@@ -234,7 +234,7 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 		// If 'app' is null, then 'instance' is also null.
 		if( instance == null ) {
 			StringBuilder sb = new StringBuilder();
-			sb.append( "A 'BACKEDUP' notification was received for an unknown instance: " );
+			sb.append( "A 'BACKED_UP' notification was received for an unknown instance: " );
 			sb.append( instancePath );
 			sb.append( " (app =  " );
 			sb.append( app );
@@ -247,7 +247,7 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 			Instance rootInstance = InstanceHelpers.findRootInstance(instance);
 			Instance rootCopy = new Instance();
 			if( instance.getParent() == null )
-				this.logger.warning( "Abnormal behavior. A 'BACKEDUP' notification was received for a root instance: " + instancePath + "." );
+				this.logger.warning( "Abnormal behavior. A 'BACKED_UP' notification was received for a root instance: " + instancePath + "." );
 			else {
 				rootCopy = InstanceHelpers.duplicateInstanceChangeNames( rootInstance );  // fix it, should duplicate only instances in the instancePath
 				try {
@@ -255,10 +255,8 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 					Application appCopy = ma.getApplication();
 					Instance instanceCopy = InstanceHelpers.findInstanceByName(appCopy, copyInstanceName);
 					Manager.INSTANCE.deployAll(ma, rootCopy);
-					//Manager.INSTANCE.undeploy(ma, instanceCopy);
-					Manager.INSTANCE.restore(ma, instanceCopy);
+					Manager.INSTANCE.restore(ma, instanceCopy, instancePath);
 					Manager.INSTANCE.start(ma, instanceCopy);
-					// should wait until all start and then stop+undeploy only the component need to be restore and then restore
 					this.logger.info( "Instance " + InstanceHelpers.computeInstancePath(instanceCopy) + " was restored at the model." );
 				} catch (ImpossibleInsertionException e) {
 					this.logger.warning( "ImpossibleInsertionException. Duplicate instance failed!" );
@@ -274,6 +272,27 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 	
 	private void processMsgNotifInstanceRestored( MsgNotifInstanceRestored message ) {		// Linh Manh Pham
 
-		
+		String oldInstancePath = message.getOldInstancePath();
+		ManagedApplication ma = Manager.INSTANCE.getAppNameToManagedApplication().get( message.getApplicationName());
+		Application app = ma != null ? ma.getApplication() : null;
+		Instance oldInstance = InstanceHelpers.findInstanceByPath( app, oldInstancePath );
+
+		// Do not turn off and clean the old instance and its machine
+		if( oldInstance == null ) {
+			StringBuilder sb = new StringBuilder();
+			sb.append( "A 'RESTORED' notification was received but we will not turn off " + oldInstancePath + " and its machine." );
+			this.logger.warning( sb.toString());
+
+		} else {
+			Instance rootInstance = InstanceHelpers.findRootInstance(oldInstance);
+				try {
+					Manager.INSTANCE.undeployAll(ma, rootInstance);
+					this.logger.info( "All instances of the path " + oldInstancePath + " removed from the model." );
+				} catch (IaasException e) {
+					this.logger.warning( "IaasException. Deploy and start instanced failed!" );
+				} catch (IOException e) {
+					this.logger.warning( "IOException. Deploy and start instanced failed!" );
+				}
+		}
 	}
 }

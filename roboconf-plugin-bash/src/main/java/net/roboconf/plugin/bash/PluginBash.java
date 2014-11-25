@@ -264,7 +264,7 @@ public class PluginBash implements PluginInterface {
         environmentVars.putAll(importedVars);
         environmentVars.put("ROBOCONF_INSTANCE_NAME", instance.getName());
         environmentVars.put("ROBOCONF_FILES_DIR", new File( instanceDir, FILES_FOLDER_NAME ).getAbsolutePath());
-
+        environmentVars.put("ROBOCONF_SCRIPTS_DIR", new File( instanceDir, SCRIPTS_FOLDER_NAME ).getAbsolutePath());
         // Upon update, retrieve the status of the instance that triggered the update.
         // Should be either DEPLOYED_STARTED or DEPLOYED_STOPPED...
         if(statusChanged != null) {

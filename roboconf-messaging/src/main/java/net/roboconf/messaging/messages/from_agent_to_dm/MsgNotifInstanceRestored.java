@@ -28,6 +28,7 @@ public class MsgNotifInstanceRestored extends Message {
 	private static final long serialVersionUID = 2504203778404700032L;
 	private final String instancePath;
 	private final String applicationName;
+	private final String oldInstancePath;
 
 
 	/**
@@ -35,10 +36,11 @@ public class MsgNotifInstanceRestored extends Message {
 	 * @param applicationName
 	 * @param componentInstance
 	 */
-	public MsgNotifInstanceRestored( String applicationName, Instance instance ) {
+	public MsgNotifInstanceRestored( String applicationName, Instance instance, String oldInstancePath ) {
 		super();
 		this.instancePath = InstanceHelpers.computeInstancePath( instance );
 		this.applicationName = applicationName;
+		this.oldInstancePath = oldInstancePath;
 	}
 
 	/**
@@ -53,5 +55,12 @@ public class MsgNotifInstanceRestored extends Message {
 	 */
 	public String getApplicationName() {
 		return this.applicationName;
+	}
+	
+	/**
+	 * @return the oldInstancePath
+	 */
+	public String getOldInstancePath() {
+		return this.oldInstancePath;
 	}
 }

@@ -157,12 +157,14 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 		boolean result = false;
 		
 		String instancePath = msg.getInstancePath();
+		String oldInstancePath = msg.getOldInstancePath();
+
 		if (instancePath == null || "".equals(instancePath)) {
 			for( Instance i : InstanceHelpers.buildHierarchicalList( this.rootInstance ))
 				this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceChanged( this.appName, i ));
 			result = true;
 		} else {
-			Instance instance = InstanceHelpers.findInstanceByPath( this.rootInstance, msg.getInstancePath());
+			Instance instance = InstanceHelpers.findInstanceByPath( this.rootInstance, instancePath);
 			PluginInterface plugin;
 			
 			plugin = this.pluginManager.findPlugin( instance, this.logger );
@@ -195,7 +197,7 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 	
 				try {
 					plugin.restore( instance );
-					this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceRestored( this.appName, instance ));
+					this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceRestored( this.appName, instance, oldInstancePath ));
 					this.logger.fine( "Instance " + msg.getInstancePath() + " was restored. A notification sent back to the DM." );
 					result = true;
 	

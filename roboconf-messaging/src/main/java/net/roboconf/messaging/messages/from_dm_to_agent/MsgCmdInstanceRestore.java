@@ -22,12 +22,13 @@ import net.roboconf.messaging.messages.Message;
 
 /**
  * @author Vincent Zurczak - Linagora
- * @author Linh Pham - LIG
+ * @author Linh Manh Pham - LIG
  */
 public class MsgCmdInstanceRestore extends Message {
 
 	private static final long serialVersionUID = 411037586577734609L;
 	private final String instancePath;
+	private final String oldInstancePath;
 	
 	/**
 	 * Constructor.
@@ -36,6 +37,7 @@ public class MsgCmdInstanceRestore extends Message {
 	public MsgCmdInstanceRestore() {
 		super();
 		this.instancePath = null;
+		this.oldInstancePath = null;
 	}
 
 	/**
@@ -45,6 +47,7 @@ public class MsgCmdInstanceRestore extends Message {
 	public MsgCmdInstanceRestore(String instancePath) {
 		super();
 		this.instancePath = instancePath;
+		this.oldInstancePath = null;
 	}
 
 	/**
@@ -54,11 +57,29 @@ public class MsgCmdInstanceRestore extends Message {
 	public MsgCmdInstanceRestore( Instance instance ) {
 		this( InstanceHelpers.computeInstancePath( instance ));
 	}
+	
+	/**
+	 * Constructor.
+	 * @param instance
+	 * @param oldInstance
+	 */
+	public MsgCmdInstanceRestore( Instance instance, String oldInstancePath ) {
+		super();
+		this.instancePath = InstanceHelpers.computeInstancePath( instance );
+		this.oldInstancePath = oldInstancePath;
+	}
 
 	/**
 	 * @return the instancePath
 	 */
 	public String getInstancePath() {
 		return this.instancePath;
+	}
+	
+	/**
+	 * @return the oldInstancePath
+	 */
+	public String getOldInstancePath() {
+		return this.oldInstancePath;
 	}
 }
