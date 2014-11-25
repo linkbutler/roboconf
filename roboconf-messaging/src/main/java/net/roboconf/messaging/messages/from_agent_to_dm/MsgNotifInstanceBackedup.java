@@ -1,5 +1,5 @@
 /**
- * Copyright 2013-2014 Linagora, Université Joseph Fourier
+ * Copyright 2014 Linagora, Université Joseph Fourier
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,45 +14,31 @@
  * limitations under the License.
  */
 
-package net.roboconf.messaging.messages.from_dm_to_agent;
+package net.roboconf.messaging.messages.from_agent_to_dm;
 
 import net.roboconf.core.model.helpers.InstanceHelpers;
 import net.roboconf.core.model.runtime.Instance;
 import net.roboconf.messaging.messages.Message;
 
 /**
- * @author Vincent Zurczak - Linagora
- * @author Linh Pham - LIG
+ * @author Linh Manh Pham - LIG
  */
-public class MsgCmdInstanceRestore extends Message {
+public class MsgNotifInstanceBackedup extends Message {
 
-	private static final long serialVersionUID = 411037586577734609L;
+	private static final long serialVersionUID = -7071403536196140938L;
 	private final String instancePath;
-	
-	/**
-	 * Constructor.
-	 * @param instancePath 
-	 */
-	public MsgCmdInstanceRestore() {
-		super();
-		this.instancePath = null;
-	}
+	private final String applicationName;
+
 
 	/**
 	 * Constructor.
-	 * @param instancePath 
+	 * @param applicationName
+	 * @param componentInstance
 	 */
-	public MsgCmdInstanceRestore(String instancePath) {
+	public MsgNotifInstanceBackedup( String applicationName, Instance instance ) {
 		super();
-		this.instancePath = instancePath;
-	}
-
-	/**
-	 * Constructor.
-	 * @param instance
-	 */
-	public MsgCmdInstanceRestore( Instance instance ) {
-		this( InstanceHelpers.computeInstancePath( instance ));
+		this.instancePath = InstanceHelpers.computeInstancePath( instance );
+		this.applicationName = applicationName;
 	}
 
 	/**
@@ -60,5 +46,12 @@ public class MsgCmdInstanceRestore extends Message {
 	 */
 	public String getInstancePath() {
 		return this.instancePath;
+	}
+
+	/**
+	 * @return the applicationName
+	 */
+	public String getApplicationName() {
+		return this.applicationName;
 	}
 }

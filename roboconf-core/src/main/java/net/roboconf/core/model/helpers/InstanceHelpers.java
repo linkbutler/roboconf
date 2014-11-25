@@ -151,7 +151,29 @@ public final class InstanceHelpers {
 		result.putAll( instance.getOverriddenExports());
 		return result;
 	}
-
+	
+	
+	/**
+	 * Finds an instance by name.
+	 * @param application the application
+	 * @param instanceName the instance name
+	 * @return an instance, or null if it was not found
+	 */
+	public static Instance findInstanceByName( Application application, String instanceName ) {
+		
+		Instance result = null;
+		if( application != null ) {
+			List<Instance> allInstances = InstanceHelpers.getAllInstances(application);
+			for( Instance instance : allInstances ) {
+				if( instanceName.equals( instance.getName())) {
+					result = instance;
+					break;
+				}
+			}
+		}
+		return result;
+	}
+	
 
 	/**
 	 * Finds an instance by name.
@@ -379,6 +401,46 @@ public final class InstanceHelpers {
 
 			Instance copy = new Instance();
 			copy.name( current.getName());
+			copy.component( current.getComponent());
+			copy.channel( current.getChannel());
+			copy.getOverriddenExports().putAll( current.getOverriddenExports());
+			instanceToDuplicate.put( current, copy );
+
+			Instance parent = instanceToDuplicate.get( current.getParent());
+			if( parent != null )
+				insertChild( parent, copy );
+
+			toProcess.addAll( current.getChildren());
+		}
+
+		return instanceToDuplicate.get( instance );
+	}
+	
+	
+	/**
+	 * Duplicates an instance and its children and change their names. //Linh Manh Pham
+	 * <p>
+	 * The result does not have any parent. It does not have any
+	 * data, nor imports or real exports. The names are changed. In fact, only 
+	 * the component association, the channel and the overridden exports
+	 * are copied. The children are not "copied" but duplicated.
+	 * </p>
+	 *
+	 * @param instance a non-null instance to duplicate
+	 * @return a non-null instance
+	 */
+	public static Instance duplicateInstanceChangeNames( Instance instance ) {
+
+		Map<Instance,Instance> instanceToDuplicate = new HashMap<Instance,Instance> ();
+		List<Instance> toProcess = new ArrayList<Instance> ();
+		String namePatch = "_migrated";
+		toProcess.add( instance );
+
+		while( ! toProcess.isEmpty()) {
+			Instance current = toProcess.remove( 0 );
+
+			Instance copy = new Instance();
+			copy.name( current.getName() + namePatch );
 			copy.component( current.getComponent());
 			copy.channel( current.getChannel());
 			copy.getOverriddenExports().putAll( current.getOverriddenExports());

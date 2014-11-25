@@ -39,8 +39,10 @@ import net.roboconf.messaging.messages.Message;
 import net.roboconf.messaging.messages.from_agent_to_agent.MsgCmdImportAdd;
 import net.roboconf.messaging.messages.from_agent_to_agent.MsgCmdImportRemove;
 import net.roboconf.messaging.messages.from_agent_to_agent.MsgCmdImportRequest;
+import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceBackedup;
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceChanged;
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceRemoved;
+import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceRestored;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceAdd;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceBackup;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceDeploy;
@@ -150,9 +152,60 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 	 * @param message the initial request
 	 * @throws IOException if an error occurred with the messaging
 	 */
-	void processMsgInstanceRestore( MsgCmdInstanceRestore message ) throws IOException {
-		for( Instance i : InstanceHelpers.buildHierarchicalList( this.rootInstance ))
-			this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceChanged( this.appName, i ));
+	boolean processMsgInstanceRestore( MsgCmdInstanceRestore msg ) throws IOException {
+		
+		boolean result = false;
+		
+		String instancePath = msg.getInstancePath();
+		if (instancePath == null || "".equals(instancePath)) {
+			for( Instance i : InstanceHelpers.buildHierarchicalList( this.rootInstance ))
+				this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceChanged( this.appName, i ));
+			result = true;
+		} else {
+			Instance instance = InstanceHelpers.findInstanceByPath( this.rootInstance, msg.getInstancePath());
+			PluginInterface plugin;
+			
+			plugin = this.pluginManager.findPlugin( instance, this.logger );
+			// Cannot find the instance
+			if( instance == null ) {
+				this.logger.severe( "No instance matched " + msg.getInstancePath() + " on the agent. Request to restore it is dropped." );
+				result = false;
+			}
+	
+			// If it is never deployed or exist problem, do nothing
+			else if( !(instance.getStatus() == InstanceStatus.DEPLOYED_STOPPED) ) {
+				this.logger.info( "Instance " + instancePath + " shoud be in stopped state before restored." );
+				result = false;
+			}
+	
+			// Is it the root instance to backup? Only can restore non-root instances (software).
+			else if( instance.getParent() == null ) {
+				this.logger.severe( "Restoring the root instance is impossible." );
+				result = false;
+			}
+	
+			// Do we have the right plug-in? Only bash support backup so far...
+			else if( plugin == null || !"bash".equals(plugin.getPluginName())) {
+				this.logger.severe( "No plug-in was found and only bash is supported to do restore " + msg.getInstancePath() + "." );
+				result = false;
+			}
+	
+			// Otherwise, process it
+			else {
+	
+				try {
+					plugin.restore( instance );
+					this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceRestored( this.appName, instance ));
+					this.logger.fine( "Instance " + msg.getInstancePath() + " was restored. A notification sent back to the DM." );
+					result = true;
+	
+				} catch( Exception e ) {
+					this.logger.severe( "An error occured while restoring" + msg.getInstancePath());
+					this.logger.finest( Utils.writeException( e ));
+				}
+			}
+		}
+		return result;
 	}
 
 	/**
@@ -192,9 +245,10 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 		// Otherwise, process it
 		else {
 
-			// Undeploy the initial instance
 			try {
 				plugin.backup( instance );
+				this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceBackedup( this.appName, instance ));
+				this.logger.fine( "Instance " + msg.getInstancePath() + " was backed up. A notification sent back to the DM." );
 				result = true;
 
 			} catch( Exception e ) {
@@ -202,7 +256,7 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 				this.logger.finest( Utils.writeException( e ));
 			}
 		}
-
+		
 		return result;
 	}
 

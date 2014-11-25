@@ -514,6 +514,26 @@ public final class Manager {
 			this.logger.fine( "Backup action for " + instancePath + " is cancelled in " + ma.getName() + "." );
 		}
 	}
+	
+	/**
+	 * Restore (second step of migration) an instance. //Linh Manh Pham
+	 * @param ma the managed application
+	 * @param instance the instance to be restored (not null)
+	 * @throws IOException if an error occurred with the messaging
+	 */
+	public void restore( ManagedApplication ma, Instance instance ) throws IOException {
+
+		String instancePath = InstanceHelpers.computeInstancePath( instance );
+		this.logger.fine( "Restore " + instancePath + " in " + ma.getName() + "..." );
+		if( instance.getParent() != null ) {
+			MsgCmdInstanceRestore message = new MsgCmdInstanceRestore( instance );
+			send( ma, message, instance );
+			this.logger.fine( "A message was (or will be) sent to the agent to restore " + instancePath + " in " + ma.getName() + "." );
+
+		} else {
+			this.logger.fine( "Restore action for " + instancePath + " is cancelled in " + ma.getName() + "." );
+		}
+	}
 
 	/**
 	 * Deploys a root instance.
@@ -642,6 +662,39 @@ public final class Manager {
 				} else {
 					deploy( ma, i );
 					start( ma, i );
+				}
+			}
+		}
+	}
+	
+	
+	/**
+	 * Deploys without starts all the instances of an application.
+	 * @param ma an application
+	 * @param instance the instance from which we deploy (can be null)
+	 * <p>
+	 * This instance and all its children will be deployed.
+	 * If null, then all the application instances are considered.
+	 * </p>
+	 *
+	 * @throws IaasException if a problem occurred with the IaaS
+	 * @throws IOException if a problem occurred with the messaging
+	 */
+	public void deployAll( ManagedApplication ma, Instance instance ) throws IaasException, IOException {
+
+		Collection<Instance> initialInstances;
+		if( instance != null )
+			initialInstances = Arrays.asList( instance );
+		else
+			initialInstances = ma.getApplication().getRootInstances();
+
+		for( Instance initialInstance : initialInstances ) {
+			for( Instance i : InstanceHelpers.buildHierarchicalList( initialInstance )) {
+				if( i.getParent() == null ) {
+					deployRoot( ma, i );
+
+				} else {
+					deploy( ma, i );
 				}
 			}
 		}
