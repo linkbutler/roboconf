@@ -196,7 +196,7 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 			else {
 	
 				try {
-					plugin.restore( instance );
+					plugin.restore( instance, oldInstancePath );
 					this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceRestored( this.appName, instance, oldInstancePath ));
 					this.logger.fine( "Instance " + msg.getInstancePath() + " was restored. A notification sent back to the DM." );
 					result = true;

@@ -20,6 +20,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.logging.Logger;
@@ -194,17 +195,48 @@ public class PluginBash implements PluginInterface {
     	
    
     @Override
-    public void restore( Instance instance ) throws PluginException {
-    	this.logger.fine( this.agentName + " is restoring instance " + instance.getName());
+    public void restore( Instance instance, String oldInstancePath ) throws PluginException {
+    	this.logger.info( this.agentName + " is restoring instance " + instance.getName() + " from instance " + oldInstancePath + "." );
     	if( this.executionLevel == ExecutionLevel.LOG )
 			return;
 
         try {
-			prepareAndExecuteCommand( "restore", instance, null, null );
+        	prepareAndExecuteCommandforRestore( "restore", instance, null, null, oldInstancePath );
 
 		} catch( Exception e ) {
 			throw new PluginException( e );
 		}
+    }
+    
+    
+    private void prepareAndExecuteCommandforRestore(String action, Instance instance, Import importChanged, InstanceStatus statusChanged, String oldInstancePath)
+    	    throws IOException, InterruptedException {
+
+    	        this.logger.info("Preparing the invocation of " + action + ".sh for instance " + instance.getName());
+    	        File instanceDirectory = InstanceHelpers.findInstanceDirectoryOnAgent( instance, getPluginName());
+
+    	        File scriptsFolder = new File(instanceDirectory, SCRIPTS_FOLDER_NAME);
+    	        File templatesFolder = new File(instanceDirectory, TEMPLATES_FOLDER_NAME);
+
+    	        File script = new File(scriptsFolder, action + ".sh");
+    	        File template = new File(templatesFolder, action + ".sh.template");
+    	        if( ! template.exists())
+    	        	template = new File(templatesFolder, "default.sh.template");
+
+    	        if (script.exists()) {
+    	            executeScriptforRestore(script, instance, importChanged, statusChanged, instanceDirectory.getAbsolutePath(), oldInstancePath);
+
+    	        } else if (template.exists()) {
+    	            File generated = generateTemplate(template, instance);
+    	            if (generated == null || !generated.exists())
+    	                throw new IOException("Not able to get the generated file from template for action " + action);
+
+    	            executeScriptforRestore(generated, instance, importChanged, statusChanged, instanceDirectory.getAbsolutePath(), oldInstancePath);
+    	            Utils.deleteFilesRecursively( generated );
+
+    	        } else {
+    	            this.logger.info("Can not find a script or a template for action " + action);
+    	        }
     }
 
 
@@ -287,6 +319,47 @@ public class PluginBash implements PluginInterface {
         if(exitCode != 0) {
         	throw new IOException( "Bash script execution failed. Exit code: " + exitCode );
         }
+    }
+    
+    
+    protected void executeScriptforRestore(File script, Instance instance, Import importChanged, InstanceStatus statusChanged, String instanceDir, String oldInstancePath)
+    	    throws IOException, InterruptedException {
+
+    	        String[] command = { "bash", script.getAbsolutePath()};
+    	        Map<String, String> environmentVars = new HashMap<String, String>();
+    	        Map<String, String> vars = formatExportedVars(instance);
+    	        environmentVars.putAll(vars);
+    	        Map<String, String> importedVars = formatImportedVars(instance);
+    	        environmentVars.putAll(importedVars);
+    	        environmentVars.put("ROBOCONF_INSTANCE_NAME", instance.getName());
+    	        environmentVars.put("ROBOCONF_FILES_DIR", new File( instanceDir, FILES_FOLDER_NAME ).getAbsolutePath());
+    	        environmentVars.put("ROBOCONF_SCRIPTS_DIR", new File( instanceDir, SCRIPTS_FOLDER_NAME ).getAbsolutePath());
+    	        List<String> splittedInstancePath = Utils.splitNicely(oldInstancePath, "/");
+    	        String oldInstanceName = splittedInstancePath.get( splittedInstancePath.size()-1 );
+    	        environmentVars.put("ROBOCONF_COPIED_FROM", oldInstanceName);
+    	        
+    	        // Upon update, retrieve the status of the instance that triggered the update.
+    	        // Should be either DEPLOYED_STARTED or DEPLOYED_STOPPED...
+    	        if(statusChanged != null) {
+    	        	environmentVars.put("ROBOCONF_UPDATE_STATUS", statusChanged.toString());
+    	        }
+
+    	        // Upon update, retrieve the import that changed
+    	        // (removed when an instance stopped, or added when it started)
+    	        if(importChanged != null) {
+    	        	environmentVars.put("ROBOCONF_IMPORT_CHANGED_INSTANCE_PATH", importChanged.getInstancePath());
+    	        	environmentVars.put("ROBOCONF_IMPORT_CHANGED_COMPONENT", importChanged.getComponentName());
+    	        	for (Entry<String, String> entry : importChanged.getExportedVars().entrySet()) {
+    	        		// "ROBOCONF_IMPORT_CHANGED_ip=127.0.0.1"
+    	        		String vname = VariableHelpers.parseVariableName(entry.getKey()).getValue();
+    	        		importedVars.put("ROBOCONF_IMPORT_CHANGED_" + vname, entry.getValue());
+    	        	}
+    	        }
+
+    	        int exitCode = ProgramUtils.executeCommand(this.logger, command, environmentVars);
+    	        if(exitCode != 0) {
+    	        	throw new IOException( "Bash script execution failed. Exit code: " + exitCode );
+    	        }
     }
 
 

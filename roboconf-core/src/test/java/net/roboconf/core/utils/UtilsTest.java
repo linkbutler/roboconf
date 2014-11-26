@@ -126,6 +126,12 @@ public class UtilsTest {
 		Assert.assertEquals( "", result.get( 3 ).trim());
 		Assert.assertEquals( "", result.get( 4 ).trim());
 		Assert.assertEquals( "time", result.get( 5 ));
+		
+		result = Utils.splitNicely( "/vmec2mysql/mysql1", "/" );
+		Assert.assertEquals( 3, result.size());
+		Assert.assertEquals( "vmec2mysql", result.get( 1 ));
+		Assert.assertEquals( "", result.get( 0 ));
+		Assert.assertEquals( "mysql1", result.get( 2 ));
 	}
 
 

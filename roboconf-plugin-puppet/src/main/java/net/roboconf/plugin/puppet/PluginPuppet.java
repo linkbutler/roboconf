@@ -241,7 +241,7 @@ public class PluginPuppet implements PluginInterface {
 	}
 	
 	@Override
-	public void restore( Instance instance ) throws PluginException {
+	public void restore( Instance instance, String oldInstancePath ) throws PluginException {
 	}
 	
 	/**

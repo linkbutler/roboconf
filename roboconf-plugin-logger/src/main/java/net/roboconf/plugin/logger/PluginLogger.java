@@ -109,8 +109,8 @@ public class PluginLogger implements PluginInterface {
 
 
 	@Override
-	public void restore( Instance instance ) throws PluginException {
+	public void restore( Instance instance, String oldInstancePath ) throws PluginException {
 		String name = instance != null ? instance.getName() : null;
-		this.logger.info( this.agentName + " is restoring instance " + name + "." );
+		this.logger.info( this.agentName + " is restoring instance " + name  + " from instance " + oldInstancePath + "." );
 	}
 }

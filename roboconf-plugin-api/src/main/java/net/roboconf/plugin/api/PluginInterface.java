@@ -83,7 +83,7 @@ public interface PluginInterface {
 	 * Restore an instance.
 	 * @param instance the instance to restore
 	 */
-	void restore( Instance instance ) throws PluginException;
+	void restore( Instance instance, String oldInstancePath ) throws PluginException;
 
 
 	/**
