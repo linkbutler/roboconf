@@ -40,6 +40,7 @@ import net.roboconf.dm.rest.UrlConstants;
  * </p>
  *
  * @author Vincent Zurczak - Linagora
+ * @author Linh Manh Pham - Linagora
  */
 public interface IApplicationWs {
 
@@ -58,7 +59,22 @@ public interface IApplicationWs {
 	@Consumes( MediaType.APPLICATION_JSON )
 	Response perform( @PathParam("name") String applicationName, @PathParam("action") String action, @QueryParam("instance-path") String instancePath );
 
+	
+	/**
+	 * Performs an action on an instance of an application.
+	 * @param applicationName the application name
+	 * @param action see {@link ApplicationAction}
+	 * @param instancePath the instance path (not null)
+	 * @param deleteOldRoot: a String, if == 0, the old migrated instance will be removed; if == 1, the old root will be removed; 
+	 *                       if == -1, don't remove anything; otherwise fail
+	 * @return a response
+	 */
+	@POST
+	@Path( "/migrate" )
+	@Consumes( MediaType.APPLICATION_JSON )
+	Response migrate( @PathParam("name") String applicationName, @QueryParam("instance-path") String instancePath, @QueryParam("delete-old-root") String deleteOldRoot );
 
+	
 	/**
 	 * Deploys and starts several instances at once.
 	 * @param applicationName the application name

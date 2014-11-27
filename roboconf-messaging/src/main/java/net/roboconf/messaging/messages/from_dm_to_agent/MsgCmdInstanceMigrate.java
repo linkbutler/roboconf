@@ -1,5 +1,5 @@
 /**
- * Copyright 2014 Linagora, Université Joseph Fourier
+ * Copyright 2013-2014 Linagora, Université Joseph Fourier
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package net.roboconf.messaging.messages.from_agent_to_dm;
+package net.roboconf.messaging.messages.from_dm_to_agent;
 
 import net.roboconf.core.model.helpers.InstanceHelpers;
 import net.roboconf.core.model.runtime.Instance;
@@ -23,38 +23,30 @@ import net.roboconf.messaging.messages.Message;
 /**
  * @author Linh Manh Pham - LIG
  */
-public class MsgNotifInstanceBackedup extends Message {
+public class MsgCmdInstanceMigrate extends Message {
 
-	private static final long serialVersionUID = -7071403536196140938L;
+
+	private static final long serialVersionUID = -8987925389702692849L;
 	private final String instancePath;
-	private final String applicationName;
 	private final String deleteOldRoot;
 
 
-	
 	/**
 	 * Constructor.
-	 * @param applicationName
-	 * @param componentInstance
+	 * @param instancePath
 	 */
-	public MsgNotifInstanceBackedup( String applicationName, Instance instance ) {
+	public MsgCmdInstanceMigrate( String instancePath, String deleteOldRoot ) {
 		super();
-		this.instancePath = InstanceHelpers.computeInstancePath( instance );
-		this.applicationName = applicationName;
-		this.deleteOldRoot = null;
-	}
-	
-	/**
-	 * Constructor.
-	 * @param applicationName
-	 * @param componentInstance
-	 * @param deleteOldRoot - only use for migration process
-	 */
-	public MsgNotifInstanceBackedup( String applicationName, Instance instance, String deleteOldRoot ) {
-		super();
-		this.instancePath = InstanceHelpers.computeInstancePath( instance );
-		this.applicationName = applicationName;
+		this.instancePath = instancePath;
 		this.deleteOldRoot = deleteOldRoot;
+	}
+
+	/**
+	 * Constructor.
+	 * @param instance
+	 */
+	public MsgCmdInstanceMigrate( Instance instance, String deleteOldRoot ) {
+		this( InstanceHelpers.computeInstancePath( instance ), deleteOldRoot);
 	}
 
 	/**
@@ -63,16 +55,9 @@ public class MsgNotifInstanceBackedup extends Message {
 	public String getInstancePath() {
 		return this.instancePath;
 	}
-
-	/**
-	 * @return the applicationName
-	 */
-	public String getApplicationName() {
-		return this.applicationName;
-	}
 	
 	/**
-	 * @return the deleteOldRoot decision
+	 * @return the instancePath
 	 */
 	public String getDeleteOldRoot() {
 		return this.deleteOldRoot;

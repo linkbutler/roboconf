@@ -27,12 +27,14 @@ import net.roboconf.core.model.runtime.Instance.InstanceStatus;
 import net.roboconf.dm.management.ManagedApplication;
 import net.roboconf.dm.management.Manager;
 import net.roboconf.dm.management.exceptions.ImpossibleInsertionException;
+import net.roboconf.dm.management.exceptions.UnauthorizedActionException;
 import net.roboconf.iaas.api.IaasException;
 import net.roboconf.messaging.client.AbstractMessageProcessor;
 import net.roboconf.messaging.messages.Message;
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifHeartbeat;
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceBackedup;
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceChanged;
+import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceMigrated;
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceRemoved;
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceRestored;
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifMachineDown;
@@ -79,6 +81,9 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 		
 		else if( message instanceof MsgNotifInstanceRestored )		// Linh Manh Pham
 			processMsgNotifInstanceRestored((MsgNotifInstanceRestored) message );
+		
+		else if( message instanceof MsgNotifInstanceMigrated )		// Linh Manh Pham
+			processMsgNotifInstanceMigrated((MsgNotifInstanceMigrated) message );
 
 		else
 			this.logger.warning( "The DM got an undetermined message to process: " + message.getClass().getName());
@@ -227,6 +232,7 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 	private void processMsgNotifInstanceBackedup( MsgNotifInstanceBackedup message ) {		// Linh Manh Pham
 
 		String instancePath = message.getInstancePath();
+		String deleteOldRoot = message.getDeleteOldRoot();
 		ManagedApplication ma = Manager.INSTANCE.getAppNameToManagedApplication().get( message.getApplicationName());
 		Application app = ma != null ? ma.getApplication() : null;
 		Instance instance = InstanceHelpers.findInstanceByPath( app, instancePath );
@@ -255,9 +261,9 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 					Application appCopy = ma.getApplication();
 					Instance instanceCopy = InstanceHelpers.findInstanceByName(appCopy, copyInstanceName);
 					Manager.INSTANCE.deployAll(ma, rootCopy);
-					Manager.INSTANCE.restore(ma, instanceCopy, instancePath);
+					Manager.INSTANCE.restore(ma, instanceCopy, instancePath, deleteOldRoot);
 					Manager.INSTANCE.start(ma, instanceCopy);
-					this.logger.info( "Instance " + InstanceHelpers.computeInstancePath(instanceCopy) + " was restored at the model." );
+					this.logger.info( "Instance " + instancePath + " was restored to " + InstanceHelpers.computeInstancePath(instanceCopy) + "." );
 				} catch (ImpossibleInsertionException e) {
 					this.logger.warning( "ImpossibleInsertionException. Duplicate instance failed!" );
 				} catch (IaasException e) {
@@ -293,6 +299,59 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 				} catch (IOException e) {
 					this.logger.warning( "IOException. Deploy and start instanced failed!" );
 				}
+		}
+	}
+	
+	
+	private void processMsgNotifInstanceMigrated( MsgNotifInstanceMigrated message ) {		// Linh Manh Pham
+
+		String oldInstancePath = message.getOldInstancePath();
+		String deleteOldRoot = message.getDeleteOldRoot();
+		ManagedApplication ma = Manager.INSTANCE.getAppNameToManagedApplication().get( message.getApplicationName());
+		Application app = ma != null ? ma.getApplication() : null;
+		Instance oldInstance = InstanceHelpers.findInstanceByPath( app, oldInstancePath );
+
+		// Do not turn off and clean the old instance and its machine
+		if( oldInstance == null ) {
+			StringBuilder sb = new StringBuilder();
+			sb.append( "A 'RESTORED' notification was received but we will not turn off " + oldInstancePath + " and its root." );
+			this.logger.warning( sb.toString());
+
+		} else {
+			if ( "1".equals(deleteOldRoot) ) {
+				try {
+					Instance rootInstance = InstanceHelpers.findRootInstance(oldInstance);
+					Manager.INSTANCE.stopAllThoroughly(ma, rootInstance);
+					Manager.INSTANCE.undeployAllThoroughly(ma, rootInstance);
+					Thread.sleep(15 * 1000);
+					Manager.INSTANCE.removeInstance(ma, rootInstance);
+					this.logger.info( "All instances of the path " + oldInstancePath + " were removed from the model." );
+				} catch (IaasException e) {
+					this.logger.warning( "IaasException. Undeploy instance failed!" );
+				} catch (IOException e) {
+					this.logger.warning( "IOException. Undeploy instance failed!" );
+				} catch (UnauthorizedActionException e) {
+					this.logger.warning( "UnauthorizedActionException. Remove instance failed!" );
+				} catch (InterruptedException e) {
+					this.logger.warning( "InterruptedException. Sleep failed!" );
+				}
+			} else if ( "0".equals(deleteOldRoot) ) {
+				try {
+					Manager.INSTANCE.stopAllThoroughly(ma, oldInstance);
+					Manager.INSTANCE.undeployAllThoroughly(ma, oldInstance);
+					Thread.sleep(15 * 1000);
+					Manager.INSTANCE.removeInstance(ma, oldInstance);
+					this.logger.info( "Instance " + oldInstance.getName() + " was removed from the model." );
+				} catch (IOException e) {
+					this.logger.warning( "IOException. Undeploy instance failed!" );
+				} catch (UnauthorizedActionException e) {
+					this.logger.warning( "UnauthorizedActionException. Remove instance failed!" );
+				} catch (IaasException e) {
+					this.logger.warning( "IOException. Stop instance failed!" );
+				} catch (InterruptedException e) {
+					this.logger.warning( "InterruptedException. Sleep failed!" );
+				}
+			}
 		}
 	}
 }

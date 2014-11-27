@@ -120,6 +120,41 @@ public class ApplicationWs implements IApplicationWs {
 
 		return response;
 	}
+	
+	
+	@Override
+	public Response migrate( String applicationName, String instancePath, String deleteOldRoot ) {
+
+		this.logger.fine( "Request: perform action 'migrate' in " + applicationName + ", instance " + instancePath + " , delete old root: " + deleteOldRoot + "." );
+		Response response;
+		try {
+			ManagedApplication ma;
+			Instance instance;
+
+			if(( ma = Manager.INSTANCE.getAppNameToManagedApplication().get( applicationName )) == null )
+				response = Response.status( Status.NOT_FOUND ).entity( "Application " + applicationName + " does not exist." ).build();
+
+			else if(( instance = InstanceHelpers.findInstanceByPath( ma.getApplication(), instancePath )) == null )
+				response = Response.status( Status.NOT_FOUND ).entity( "Instance " + instancePath + " was not found." ).build();
+
+			else if( "-1".equals(deleteOldRoot) || "1".equals(deleteOldRoot) || "0".equals(deleteOldRoot) ) {   
+				Manager.INSTANCE.migrate( ma, instance, deleteOldRoot );
+				response = Response.ok().build();
+				
+			} else {
+				response = Response.status( Status.BAD_REQUEST ).entity( "Invalid parameter delete_old_root: " + deleteOldRoot + " . It should only be '-1', '0' or '1'." ).build();
+			}
+
+		} catch( IOException e ) {
+			response = Response.status( Status.FORBIDDEN ).entity( e.getMessage()).build();
+
+		} catch( Exception e ) {
+			response = Response.status( Status.INTERNAL_SERVER_ERROR ).entity( e.getMessage()).build();
+			this.logger.finest( Utils.writeException( e ));
+		}
+
+		return response;
+	}
 
 
 	/*

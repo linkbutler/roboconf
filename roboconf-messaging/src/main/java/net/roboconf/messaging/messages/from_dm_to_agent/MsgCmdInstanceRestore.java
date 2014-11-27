@@ -29,6 +29,7 @@ public class MsgCmdInstanceRestore extends Message {
 	private static final long serialVersionUID = 411037586577734609L;
 	private final String instancePath;
 	private final String oldInstancePath;
+	private final String deleteOldRoot;
 	
 	/**
 	 * Constructor.
@@ -38,6 +39,7 @@ public class MsgCmdInstanceRestore extends Message {
 		super();
 		this.instancePath = null;
 		this.oldInstancePath = null;
+		this.deleteOldRoot = null;
 	}
 
 	/**
@@ -48,6 +50,7 @@ public class MsgCmdInstanceRestore extends Message {
 		super();
 		this.instancePath = instancePath;
 		this.oldInstancePath = null;
+		this.deleteOldRoot = null;
 	}
 
 	/**
@@ -67,6 +70,20 @@ public class MsgCmdInstanceRestore extends Message {
 		super();
 		this.instancePath = InstanceHelpers.computeInstancePath( instance );
 		this.oldInstancePath = oldInstancePath;
+		this.deleteOldRoot = null;
+	}
+	
+	/**
+	 * Constructor.
+	 * @param instance
+	 * @param oldInstance
+	 * @param deleteOldRoot
+	 */
+	public MsgCmdInstanceRestore( Instance instance, String oldInstancePath, String deleteOldRoot ) {
+		super();
+		this.instancePath = InstanceHelpers.computeInstancePath( instance );
+		this.oldInstancePath = oldInstancePath;
+		this.deleteOldRoot = deleteOldRoot;
 	}
 
 	/**
@@ -81,5 +98,12 @@ public class MsgCmdInstanceRestore extends Message {
 	 */
 	public String getOldInstancePath() {
 		return this.oldInstancePath;
+	}
+	
+	/**
+	 * @return the instancePath
+	 */
+	public String getDeleteOldRoot() {
+		return this.deleteOldRoot;
 	}
 }

@@ -41,11 +41,13 @@ import net.roboconf.messaging.messages.from_agent_to_agent.MsgCmdImportRemove;
 import net.roboconf.messaging.messages.from_agent_to_agent.MsgCmdImportRequest;
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceBackedup;
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceChanged;
+import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceMigrated;
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceRemoved;
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceRestored;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceAdd;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceBackup;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceDeploy;
+import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceMigrate;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceRemove;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceRestore;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceStart;
@@ -132,6 +134,9 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 			
 			else if( message instanceof MsgCmdInstanceBackup )
 				processMsgInstanceBackup((MsgCmdInstanceBackup) message );	// Linh Manh Pham
+			
+			else if( message instanceof MsgCmdInstanceMigrate )
+				processMsgInstanceMigrate((MsgCmdInstanceMigrate) message );	// Linh Manh Pham
 
 			else
 				this.logger.warning( getName() + " got an undetermined message to process. " + message.getClass().getName());
@@ -158,6 +163,7 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 		
 		String instancePath = msg.getInstancePath();
 		String oldInstancePath = msg.getOldInstancePath();
+		String deleteOldRoot = msg.getDeleteOldRoot();
 
 		if (instancePath == null || "".equals(instancePath)) {
 			for( Instance i : InstanceHelpers.buildHierarchicalList( this.rootInstance ))
@@ -194,16 +200,28 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 	
 			// Otherwise, process it
 			else {
-	
-				try {
-					plugin.restore( instance, oldInstancePath );
-					this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceRestored( this.appName, instance, oldInstancePath ));
-					this.logger.fine( "Instance " + msg.getInstancePath() + " was restored. A notification sent back to the DM." );
-					result = true;
-	
-				} catch( Exception e ) {
-					this.logger.severe( "An error occured while restoring" + msg.getInstancePath());
-					this.logger.finest( Utils.writeException( e ));
+				if (deleteOldRoot == null) {	// for restore operation only
+					try {
+						plugin.restore( instance, oldInstancePath );
+						this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceRestored( this.appName, instance, oldInstancePath ));
+						this.logger.fine( "Instance " + msg.getInstancePath() + " was restored. A notification sent back to the DM." );
+						result = true;
+		
+					} catch( Exception e ) {
+						this.logger.severe( "An error occured while restoring" + msg.getInstancePath());
+						this.logger.finest( Utils.writeException( e ));
+					}
+				} else {	// for migration operation
+					try {
+						plugin.restore( instance, oldInstancePath );
+						this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceMigrated( this.appName, instance, oldInstancePath, deleteOldRoot ));
+						this.logger.fine( "Instance " + msg.getInstancePath() + " was migrated. A notification sent back to the DM." );
+						result = true;
+		
+					} catch( Exception e ) {
+						this.logger.severe( "An error occured while restoring" + msg.getInstancePath());
+						this.logger.finest( Utils.writeException( e ));
+					}
 				}
 			}
 		}
@@ -213,7 +231,7 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 	/**
 	 * Backup an instance - a part of migration process - Linh Manh Pham.
 	 * @param message the initial request
-	 * @return true if an backup was made, false otherwise
+	 * @return true if a backup was made, false otherwise
 	 * @throws IOException if an error occurred with the messaging
 	 */
 	boolean processMsgInstanceBackup( MsgCmdInstanceBackup msg ) throws IOException {
@@ -261,6 +279,61 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 		
 		return result;
 	}
+	
+	
+	/**
+	 * Migrate an instance - Linh Manh Pham.
+	 * @param message the initial request
+	 * @return true if a migration was made, false otherwise
+	 * @throws IOException if an error occurred with the messaging
+	 */
+	boolean processMsgInstanceMigrate( MsgCmdInstanceMigrate msg ) throws IOException {
+		boolean result = false;
+
+		String instancePath = msg.getInstancePath();
+		String deleteOldRoot = msg.getDeleteOldRoot();
+		Instance instance = InstanceHelpers.findInstanceByPath( this.rootInstance, msg.getInstancePath());
+		PluginInterface plugin;
+		
+		plugin = this.pluginManager.findPlugin( instance, this.logger );
+		// Cannot find the instance
+		if( instance == null ) {
+			this.logger.severe( "No instance matched " + msg.getInstancePath() + " on the agent. Request to backup it is dropped." );
+		}
+
+		// If it is never deployed or exist problem, do nothing
+		else if( instance.getStatus() == InstanceStatus.NOT_DEPLOYED || instance.getStatus() == InstanceStatus.PROBLEM ) {
+			this.logger.info( "Instance " + instancePath + " is never deployed. Backup request is dropped." );
+		}
+
+		// Is it the root instance to backup? Only can backup non-root instances (software).
+		else if( instance.getParent() == null ) {
+			this.logger.severe( "Backing up the root instance is impossible." );
+		}
+
+		// Do we have the right plug-in? Only bash support backup so far...
+		else if( plugin == null || !"bash".equals(plugin.getPluginName())) {
+			this.logger.severe( "No plug-in was found and only bash is supported to do backup " + msg.getInstancePath() + "." );
+		}
+
+		// Otherwise, process it
+		else {
+
+			try {
+				plugin.backup( instance );
+				this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceBackedup( this.appName, instance, deleteOldRoot ));
+				this.logger.fine( "Instance " + msg.getInstancePath() + " was backed up. A notification sent back to the DM." );
+				result = true;
+
+			} catch( Exception e ) {
+				this.logger.severe( "An error occured while backing up of migration progress " + msg.getInstancePath());
+				this.logger.finest( Utils.writeException( e ));
+			}
+		}
+		
+		return result;
+	}
+	
 
 	/**
 	 * Adds an instance to the local model.

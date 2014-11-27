@@ -23,37 +23,27 @@ import net.roboconf.messaging.messages.Message;
 /**
  * @author Linh Manh Pham - LIG
  */
-public class MsgNotifInstanceBackedup extends Message {
+public class MsgNotifInstanceMigrated extends Message {
 
-	private static final long serialVersionUID = -7071403536196140938L;
+	private static final long serialVersionUID = -5859003781380732757L;
 	private final String instancePath;
 	private final String applicationName;
+	private final String oldInstancePath;
 	private final String deleteOldRoot;
 
 
-	
 	/**
 	 * Constructor.
 	 * @param applicationName
 	 * @param componentInstance
+	 * @param oldInstancePath
+	 * @param oldDeleteRoot
 	 */
-	public MsgNotifInstanceBackedup( String applicationName, Instance instance ) {
+	public MsgNotifInstanceMigrated( String applicationName, Instance instance, String oldInstancePath, String deleteOldRoot ) {
 		super();
 		this.instancePath = InstanceHelpers.computeInstancePath( instance );
 		this.applicationName = applicationName;
-		this.deleteOldRoot = null;
-	}
-	
-	/**
-	 * Constructor.
-	 * @param applicationName
-	 * @param componentInstance
-	 * @param deleteOldRoot - only use for migration process
-	 */
-	public MsgNotifInstanceBackedup( String applicationName, Instance instance, String deleteOldRoot ) {
-		super();
-		this.instancePath = InstanceHelpers.computeInstancePath( instance );
-		this.applicationName = applicationName;
+		this.oldInstancePath = oldInstancePath;
 		this.deleteOldRoot = deleteOldRoot;
 	}
 
@@ -72,9 +62,16 @@ public class MsgNotifInstanceBackedup extends Message {
 	}
 	
 	/**
-	 * @return the deleteOldRoot decision
+	 * @return the instancePath
 	 */
 	public String getDeleteOldRoot() {
 		return this.deleteOldRoot;
+	}
+	
+	/**
+	 * @return the oldInstancePath
+	 */
+	public String getOldInstancePath() {
+		return this.oldInstancePath;
 	}
 }

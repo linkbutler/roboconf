@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Timer;
@@ -54,6 +55,7 @@ import net.roboconf.messaging.messages.Message;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceAdd;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceBackup;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceDeploy;
+import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceMigrate;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceRemove;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceRestore;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceStart;
@@ -515,19 +517,43 @@ public final class Manager {
 		}
 	}
 	
+	
+	/**
+	 * Migrate an instance. //Linh Manh Pham
+	 * @param ma the managed application
+	 * @param instance the instance to backup (not null)
+	 * @param deleteOldRoot if '1', delete the old root, if '0', only delete the backed up instance, if '-1' don't delete anything, otherwise fail
+	 * @throws IOException if an error occurred with the messaging
+	 */
+	public void migrate( ManagedApplication ma, Instance instance, String deleteOldRoot ) throws IOException {
+
+		String instancePath = InstanceHelpers.computeInstancePath( instance );
+		this.logger.fine( "Migrate " + instancePath + " in " + ma.getName() + " with decision of delete of root is " + deleteOldRoot + "." );
+		if( instance.getParent() != null ) {
+			MsgCmdInstanceMigrate message = new MsgCmdInstanceMigrate( instance, deleteOldRoot );
+			send( ma, message, instance );
+			this.logger.fine( "A message was (or will be) sent to the agent to migrate " + instancePath + " in " + ma.getName() + " with decision of delete of root is " + deleteOldRoot + "." );
+
+		} else {
+			this.logger.fine( "Migrate action for " + instancePath + " is cancelled in " + ma.getName() + "." );
+		}
+	}
+	
+	
 	/**
 	 * Restore (second step of migration) an instance. //Linh Manh Pham
 	 * @param ma the managed application
 	 * @param instance the instance to be restored (not null)
 	 * @param oldInstance the old instance which has just backed up (not null)
+	 * @param deleteOldRoot '-1' don't delete anything, '0' delete the backed up instance, '1' delete the root instance, otherwise fail
 	 * @throws IOException if an error occurred with the messaging
 	 */
-	public void restore( ManagedApplication ma, Instance instance, String oldInstancePath ) throws IOException {
+	public void restore( ManagedApplication ma, Instance instance, String oldInstancePath, String deleteOldRoot ) throws IOException {
 
 		String instancePath = InstanceHelpers.computeInstancePath( instance );
 		this.logger.fine( "Restore " + instancePath + " in " + ma.getName() + "..." );
 		if( instance.getParent() != null ) {
-			MsgCmdInstanceRestore message = new MsgCmdInstanceRestore( instance, oldInstancePath );
+			MsgCmdInstanceRestore message = new MsgCmdInstanceRestore( instance, oldInstancePath, deleteOldRoot );
 			send( ma, message, instance );
 			this.logger.fine( "A message was (or will be) sent to the agent to restore " + instancePath + " in " + ma.getName() + "." );
 
@@ -729,14 +755,47 @@ public final class Manager {
 				stop( ma, i );
 		}
 	}
+	
+	
+	/**
+	 * Stop all the instances of an application from leaves to children of roots, except rootInstances.
+	 * @param ma an application
+	 * @param instance the instance from which we stop (can be null)
+	 * <p>
+	 * This instance and all its children will be stopped. The stop scripts all are executed.
+	 * If null, then all the application instances are considered.
+	 * </p>
+	 *
+	 * @throws IaasException if a problem occurred with the IaaS
+	 * @throws IOException if a problem occurred with the messaging
+	 */
+	public void stopAllThoroughly( ManagedApplication ma, Instance instance ) throws IaasException, IOException {
+
+		Collection<Instance> initialInstances;
+		if( instance != null )
+			initialInstances = Arrays.asList( instance );
+		else
+			initialInstances = ma.getApplication().getRootInstances();
+
+		for( Instance initialInstance : initialInstances ) {
+			List<Instance> hierarchicalList = InstanceHelpers.buildHierarchicalList( initialInstance );
+			Collections.reverse(hierarchicalList);
+			// Stop in reverse.
+			for( Instance i : hierarchicalList ) {
+				if( !(i.getParent() == null) ) {
+					stop( ma, i );
+				}
+			}
+		}
+	}
 
 
 	/**
 	 * Undeploys all the instances of an application.
 	 * @param ma an application
-	 * @param instance the instance from which we deploy and start (can be null)
+	 * @param instance the instance from which we want to undeploy (can be null)
 	 * <p>
-	 * This instance and all its children will be deployed and started.
+	 * This instance and all its children will be undeployed.
 	 * If null, then all the application instances are considered.
 	 * </p>
 	 *
@@ -760,7 +819,42 @@ public final class Manager {
 		}
 	}
 
+	
+	/**
+	 * Undeploys all the instances of an application from leaves to roots.
+	 * @param ma an application
+	 * @param instance the instance from which we undeploy (can be null)
+	 * <p>
+	 * This instance and all its children will be undeployed. The undeploy scripts all are executed.
+	 * If null, then all the application instances are considered.
+	 * </p>
+	 *
+	 * @throws IaasException if a problem occurred with the IaaS
+	 * @throws IOException if a problem occurred with the messaging
+	 */
+	public void undeployAllThoroughly( ManagedApplication ma, Instance instance ) throws IaasException, IOException {
 
+		Collection<Instance> initialInstances;
+		if( instance != null )
+			initialInstances = Arrays.asList( instance );
+		else
+			initialInstances = ma.getApplication().getRootInstances();
+
+		for( Instance initialInstance : initialInstances ) {
+			List<Instance> hierarchicalList = InstanceHelpers.buildHierarchicalList( initialInstance );
+			Collections.reverse(hierarchicalList);
+			// Undeploy in reverse.
+			for( Instance i : hierarchicalList ) {
+				if( i.getParent() == null ) {
+					undeployRoot( ma, i );
+				} else {
+					undeploy( ma, i );
+				}
+			}
+		}
+	}
+	
+	
 	/**
 	 * Sends a message, or stores it if the target machine is not yet online.
 	 * @param ma the managed application
