@@ -455,4 +455,52 @@ public final class InstanceHelpers {
 
 		return instanceToDuplicate.get( instance );
 	}
+	
+	
+	/**
+	 * Duplicates all instances appearing in an instancePath of an instance. //Linh Manh Pham
+	 * <p>
+	 * The result does not have any parent. It does not have any
+	 * data, nor imports or real exports. The names are changed. In fact, only 
+	 * the component association, the channel and the overridden exports
+	 * are copied. The children are not "copied" but duplicated.
+	 * </p>
+	 *
+	 * @param instance a non-null instance to duplicate
+	 * @return a non-null instance
+	 */
+	public static Instance duplicateAllInstancesOnTheInstancePathOf( Instance instance ) {
+		
+		List<String> splittedInstancePath = Utils.splitNicely(InstanceHelpers.computeInstancePath(instance), "/");
+		splittedInstancePath.remove(0);
+		splittedInstancePath.remove(0);
+		Instance rootInstance = InstanceHelpers.findRootInstance(instance);
+		Map<Instance,Instance> instanceToDuplicate = new HashMap<Instance,Instance> ();
+		List<Instance> toProcess = new ArrayList<Instance> ();
+		String namePatch = "_migrated";
+		toProcess.add( rootInstance );
+
+		while( ! toProcess.isEmpty()) {
+			Instance current = toProcess.remove( 0 );
+
+			Instance copy = new Instance();
+			copy.name( current.getName() + namePatch );
+			copy.component( current.getComponent());
+			copy.channel( current.getChannel());
+			copy.getOverriddenExports().putAll( current.getOverriddenExports());
+			instanceToDuplicate.put( current, copy );
+
+			Instance parent = instanceToDuplicate.get( current.getParent());
+			if( parent != null ) {
+				for( String instanceName : splittedInstancePath ) {
+			        if ( instanceName.equals(current.getName()) ) {
+			        	insertChild( parent, copy );
+			        }
+			    }
+			}
+			toProcess.addAll( current.getChildren());
+		}
+
+		return instanceToDuplicate.get( rootInstance );
+	}
 }

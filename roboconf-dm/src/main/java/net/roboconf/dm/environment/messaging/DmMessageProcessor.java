@@ -250,26 +250,30 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 		} else {
 			String instanceName = instance.getName();
 			String copyInstanceName = instanceName + "_migrated";
-			Instance rootInstance = InstanceHelpers.findRootInstance(instance);
+			//Instance rootInstance = InstanceHelpers.findRootInstance(instance);
 			Instance rootCopy = new Instance();
 			if( instance.getParent() == null )
 				this.logger.warning( "Abnormal behavior. A 'BACKED_UP' notification was received for a root instance: " + instancePath + "." );
 			else {
-				rootCopy = InstanceHelpers.duplicateInstanceChangeNames( rootInstance );  // fix it, should duplicate only instances in the instancePath
-				try {
-					Manager.INSTANCE.addInstance(ma, null, rootCopy);  
-					Application appCopy = ma.getApplication();
-					Instance instanceCopy = InstanceHelpers.findInstanceByName(appCopy, copyInstanceName);
-					Manager.INSTANCE.deployAll(ma, rootCopy);
-					Manager.INSTANCE.restore(ma, instanceCopy, instancePath, deleteOldRoot);
-					Manager.INSTANCE.start(ma, instanceCopy);
-					this.logger.info( "Instance " + instancePath + " was restored to " + InstanceHelpers.computeInstancePath(instanceCopy) + "." );
-				} catch (ImpossibleInsertionException e) {
-					this.logger.warning( "ImpossibleInsertionException. Duplicate instance failed!" );
-				} catch (IaasException e) {
-					this.logger.warning( "IaasException. Deploy and start instanced failed!" );
-				} catch (IOException e) {
-					this.logger.warning( "IOException. Deploy and start instanced failed!" );
+				if ( deleteOldRoot == null ) {	// only back up
+					this.logger.info( "Instance: " + instancePath + " was backed up succesfully." );
+				} else {	// for back up as a part of migration progress
+					rootCopy = InstanceHelpers.duplicateAllInstancesOnTheInstancePathOf( instance );
+					try {
+						Manager.INSTANCE.addInstance(ma, null, rootCopy);  
+						Application appCopy = ma.getApplication();
+						Instance instanceCopy = InstanceHelpers.findInstanceByName(appCopy, copyInstanceName);
+						Manager.INSTANCE.deployAll(ma, rootCopy);
+						Manager.INSTANCE.restore(ma, instanceCopy, instancePath, deleteOldRoot);
+						Manager.INSTANCE.start(ma, instanceCopy);
+						this.logger.info( "A request to restore " + instancePath + " to " + InstanceHelpers.computeInstancePath(instanceCopy) + " was sent." );
+					} catch (ImpossibleInsertionException e) {
+						this.logger.warning( "ImpossibleInsertionException. Duplicate instance failed!" );
+					} catch (IaasException e) {
+						this.logger.warning( "IaasException. Deploy and start instanced failed!" );
+					} catch (IOException e) {
+						this.logger.warning( "IOException. Deploy and start instanced failed!" );
+					}
 				}
 			}
 		}
@@ -278,28 +282,50 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 	
 	private void processMsgNotifInstanceRestored( MsgNotifInstanceRestored message ) {		// Linh Manh Pham
 
-		String oldInstancePath = message.getOldInstancePath();
-		ManagedApplication ma = Manager.INSTANCE.getAppNameToManagedApplication().get( message.getApplicationName());
-		Application app = ma != null ? ma.getApplication() : null;
-		Instance oldInstance = InstanceHelpers.findInstanceByPath( app, oldInstancePath );
-
-		// Do not turn off and clean the old instance and its machine
-		if( oldInstance == null ) {
-			StringBuilder sb = new StringBuilder();
-			sb.append( "A 'RESTORED' notification was received but we will not turn off " + oldInstancePath + " and its machine." );
-			this.logger.warning( sb.toString());
-
+		//String oldInstancePath = message.getOldInstancePath();
+		//String deleteOldRoot = message.getDeleteOldRoot();
+		//ManagedApplication ma = Manager.INSTANCE.getAppNameToManagedApplication().get( message.getApplicationName());
+		//Application app = ma != null ? ma.getApplication() : null;
+		//Instance oldInstance = InstanceHelpers.findInstanceByPath( app, oldInstancePath );
+		StringBuilder sb = new StringBuilder();
+		sb.append( "A 'RESTORED' notification was received. The restore operation finished!" );
+		this.logger.warning( sb.toString());
+		/*if ( "1".equals(deleteOldRoot) ) {
+			try {
+				Instance rootInstance = InstanceHelpers.findRootInstance(oldInstance);
+				Manager.INSTANCE.stopAllThoroughly(ma, rootInstance);
+				Manager.INSTANCE.undeployAllThoroughly(ma, rootInstance);
+				Thread.sleep(15 * 1000);
+				Manager.INSTANCE.removeInstance(ma, rootInstance);
+				this.logger.info( "All instances of the path " + oldInstancePath + " were removed from the model." );
+			} catch (IaasException e) {
+				this.logger.warning( "IaasException. Undeploy instance failed!" );
+			} catch (IOException e) {
+				this.logger.warning( "IOException. Undeploy instance failed!" );
+			} catch (UnauthorizedActionException e) {
+				this.logger.warning( "UnauthorizedActionException. Remove instance failed!" );
+			} catch (InterruptedException e) {
+				this.logger.warning( "InterruptedException. Sleep failed!" );
+			}
+		} else if ( "0".equals(deleteOldRoot) ) {
+			try {
+				Manager.INSTANCE.stopAllThoroughly(ma, oldInstance);
+				Manager.INSTANCE.undeployAllThoroughly(ma, oldInstance);
+				Thread.sleep(15 * 1000);
+				Manager.INSTANCE.removeInstance(ma, oldInstance);
+				this.logger.info( "Instance " + oldInstance.getName() + " was removed from the model." );
+			} catch (IOException e) {
+				this.logger.warning( "IOException. Undeploy instance failed!" );
+			} catch (UnauthorizedActionException e) {
+				this.logger.warning( "UnauthorizedActionException. Remove instance failed!" );
+			} catch (IaasException e) {
+				this.logger.warning( "IOException. Stop instance failed!" );
+			} catch (InterruptedException e) {
+				this.logger.warning( "InterruptedException. Sleep failed!" );
+			}
 		} else {
-			Instance rootInstance = InstanceHelpers.findRootInstance(oldInstance);
-				try {
-					Manager.INSTANCE.undeployAll(ma, rootInstance);
-					this.logger.info( "All instances of the path " + oldInstancePath + " removed from the model." );
-				} catch (IaasException e) {
-					this.logger.warning( "IaasException. Deploy and start instanced failed!" );
-				} catch (IOException e) {
-					this.logger.warning( "IOException. Deploy and start instanced failed!" );
-				}
-		}
+			this.logger.info( "We keep all instances in the " + oldInstancePath + ". Nothing was removed from the model." );
+		}*/
 	}
 	
 	
@@ -314,7 +340,7 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 		// Do not turn off and clean the old instance and its machine
 		if( oldInstance == null ) {
 			StringBuilder sb = new StringBuilder();
-			sb.append( "A 'RESTORED' notification was received but we will not turn off " + oldInstancePath + " and its root." );
+			sb.append( "A 'MIGRATED' notification was received but we don't know how to do next." );
 			this.logger.warning( sb.toString());
 
 		} else {
@@ -323,7 +349,7 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 					Instance rootInstance = InstanceHelpers.findRootInstance(oldInstance);
 					Manager.INSTANCE.stopAllThoroughly(ma, rootInstance);
 					Manager.INSTANCE.undeployAllThoroughly(ma, rootInstance);
-					Thread.sleep(15 * 1000);
+					Thread.sleep(30 * 1000);
 					Manager.INSTANCE.removeInstance(ma, rootInstance);
 					this.logger.info( "All instances of the path " + oldInstancePath + " were removed from the model." );
 				} catch (IaasException e) {
@@ -351,6 +377,8 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 				} catch (InterruptedException e) {
 					this.logger.warning( "InterruptedException. Sleep failed!" );
 				}
+			} else {
+				this.logger.info( "We keep all instances in the " + oldInstancePath + ". Nothing was removed from the model." );
 			}
 		}
 	}

@@ -420,5 +420,9 @@ public class InstanceHelpersTest {
 		Assert.assertEquals( original_3.getComponent(), lastChild.getComponent());
 		Assert.assertEquals( 0, lastChild.getChildren().size());
 		Assert.assertEquals( copy, lastChild.getParent());
+		
+		// Perform a copy of all instances on the instancePath of an instance, return a copied root instance
+		copy = InstanceHelpers.duplicateAllInstancesOnTheInstancePathOf( original_3 );
+		Assert.assertEquals( 1, copy.getChildren().size());
 	}
 }

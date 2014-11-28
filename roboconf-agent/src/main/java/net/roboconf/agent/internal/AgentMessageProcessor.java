@@ -181,8 +181,8 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 			}
 	
 			// If it is never deployed or exist problem, do nothing
-			else if( !(instance.getStatus() == InstanceStatus.DEPLOYED_STOPPED) ) {
-				this.logger.info( "Instance " + instancePath + " shoud be in stopped state before restored." );
+			else if( instance.getStatus() == InstanceStatus.NOT_DEPLOYED || instance.getStatus() == InstanceStatus.PROBLEM ) {
+				this.logger.info( "Instance " + instancePath + " is never deployed. Restore request is dropped." );
 				result = false;
 			}
 	
@@ -203,19 +203,19 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 				if (deleteOldRoot == null) {	// for restore operation only
 					try {
 						plugin.restore( instance, oldInstancePath );
-						this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceRestored( this.appName, instance, oldInstancePath ));
-						this.logger.fine( "Instance " + msg.getInstancePath() + " was restored. A notification sent back to the DM." );
+						this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceRestored( this.appName, instance, oldInstancePath, deleteOldRoot ));
+						this.logger.fine( "Instance " + instancePath + " was restored from the " + oldInstancePath + ". A notification sent back to the DM." );
 						result = true;
 		
 					} catch( Exception e ) {
 						this.logger.severe( "An error occured while restoring" + msg.getInstancePath());
 						this.logger.finest( Utils.writeException( e ));
 					}
-				} else {	// for migration operation
+				} else {	// for restore as a part of migration progress
 					try {
 						plugin.restore( instance, oldInstancePath );
 						this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceMigrated( this.appName, instance, oldInstancePath, deleteOldRoot ));
-						this.logger.fine( "Instance " + msg.getInstancePath() + " was migrated. A notification sent back to the DM." );
+						this.logger.fine( "Instance " + instancePath + " was migrated from the " + oldInstancePath + ". A notification sent back to the DM." );
 						result = true;
 		
 					} catch( Exception e ) {

@@ -498,7 +498,7 @@ public final class Manager {
 	}
 	
 	/**
-	 * Backup (first step of migration) an instance. //Linh Manh Pham
+	 * Backup (or the first step of a migration) an instance. //Linh Manh Pham
 	 * @param ma the managed application
 	 * @param instance the instance to backup (not null)
 	 * @throws IOException if an error occurred with the messaging
@@ -521,7 +521,7 @@ public final class Manager {
 	/**
 	 * Migrate an instance. //Linh Manh Pham
 	 * @param ma the managed application
-	 * @param instance the instance to backup (not null)
+	 * @param instance the instance to be backed up (not null)
 	 * @param deleteOldRoot if '1', delete the old root, if '0', only delete the backed up instance, if '-1' don't delete anything, otherwise fail
 	 * @throws IOException if an error occurred with the messaging
 	 */
@@ -541,7 +541,7 @@ public final class Manager {
 	
 	
 	/**
-	 * Restore (second step of migration) an instance. //Linh Manh Pham
+	 * Restore (or the second step of migration) an instance. //Linh Manh Pham
 	 * @param ma the managed application
 	 * @param instance the instance to be restored (not null)
 	 * @param oldInstance the old instance which has just backed up (not null)

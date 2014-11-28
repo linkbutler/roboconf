@@ -62,7 +62,7 @@ public class MsgNotifInstanceMigrated extends Message {
 	}
 	
 	/**
-	 * @return the instancePath
+	 * @return value of the deleteOldRoot para
 	 */
 	public String getDeleteOldRoot() {
 		return this.deleteOldRoot;

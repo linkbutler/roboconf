@@ -29,6 +29,7 @@ public class MsgNotifInstanceRestored extends Message {
 	private final String instancePath;
 	private final String applicationName;
 	private final String oldInstancePath;
+	private final String deleteOldRoot;
 
 
 	/**
@@ -36,11 +37,12 @@ public class MsgNotifInstanceRestored extends Message {
 	 * @param applicationName
 	 * @param componentInstance
 	 */
-	public MsgNotifInstanceRestored( String applicationName, Instance instance, String oldInstancePath ) {
+	public MsgNotifInstanceRestored( String applicationName, Instance instance, String oldInstancePath, String deleteOldRoot ) {
 		super();
 		this.instancePath = InstanceHelpers.computeInstancePath( instance );
 		this.applicationName = applicationName;
 		this.oldInstancePath = oldInstancePath;
+		this.deleteOldRoot = deleteOldRoot;
 	}
 
 	/**
@@ -62,5 +64,12 @@ public class MsgNotifInstanceRestored extends Message {
 	 */
 	public String getOldInstancePath() {
 		return this.oldInstancePath;
+	}
+	
+	/**
+	 * @return value of the deleteOldRoot para
+	 */
+	public String getDeleteOldRoot() {
+		return this.deleteOldRoot;
 	}
 }
