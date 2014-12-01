@@ -290,7 +290,27 @@ public final class InstanceHelpers {
 
 		return result;
 	}
-
+	
+	
+	/**
+	 * Gets all the instances of an application appearing in an instancePath.
+	 * @param application an application (not null)
+	 * @param instancePath an instancePath (not null)
+	 * @return a non-null list of instances
+	 */
+	public static List<Instance> getAllInstancesInTheInstancePath( Application application, String instancePath ) {
+		
+		List<String> splittedInstancePath = Utils.splitNicely(instancePath, "/");
+		splittedInstancePath.remove(0);
+		List<Instance> returnInstances = new ArrayList<Instance> (); 
+		for (String i : splittedInstancePath ) {
+			Instance currentInstance = InstanceHelpers.findInstanceByName(application, i);
+			returnInstances.add(currentInstance);
+		}
+		
+		return returnInstances;
+	}
+	
 
 	/**
 	 * Tries to insert a child instance.

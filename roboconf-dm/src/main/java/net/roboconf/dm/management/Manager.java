@@ -545,17 +545,18 @@ public final class Manager {
 	 * @param ma the managed application
 	 * @param instance the instance to be restored (not null)
 	 * @param oldInstance the old instance which has just backed up (not null)
+	 * @param destPath destination path where instance will be restored (not null)
 	 * @param deleteOldRoot '-1' don't delete anything, '0' delete the backed up instance, '1' delete the root instance, otherwise fail
 	 * @throws IOException if an error occurred with the messaging
 	 */
-	public void restore( ManagedApplication ma, Instance instance, String oldInstancePath, String deleteOldRoot ) throws IOException {
+	public void restore( ManagedApplication ma, Instance instance, String oldInstancePath, String destPath, String deleteOldRoot ) throws IOException {
 
 		String instancePath = InstanceHelpers.computeInstancePath( instance );
-		this.logger.fine( "Restore " + instancePath + " in " + ma.getName() + "..." );
+		this.logger.fine( "Restore " + instancePath + " in " + ma.getName() + " to" + destPath +"..." );
 		if( instance.getParent() != null ) {
-			MsgCmdInstanceRestore message = new MsgCmdInstanceRestore( instance, oldInstancePath, deleteOldRoot );
+			MsgCmdInstanceRestore message = new MsgCmdInstanceRestore( instance, oldInstancePath, destPath, deleteOldRoot );
 			send( ma, message, instance );
-			this.logger.fine( "A message was (or will be) sent to the agent to restore " + instancePath + " in " + ma.getName() + "." );
+			this.logger.fine( "A message was (or will be) sent to the agent to restore " + instancePath + " in " + ma.getName() + " to " + destPath + "." );
 
 		} else {
 			this.logger.fine( "Restore action for " + instancePath + " is cancelled in " + ma.getName() + "." );

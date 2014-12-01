@@ -19,7 +19,9 @@ package net.roboconf.dm.server;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import javax.ws.rs.Path;
@@ -158,9 +160,9 @@ public class ApplicationWs implements IApplicationWs {
 	
 	
 	@Override
-	public Response restore( String applicationName, String instancePath, String deleteOldRoot ) {
+	public Response restore( String applicationName, String instancePath, String destPath, String deleteOldRoot ) {
 
-		this.logger.fine( "Request: perform action 'restore' in " + applicationName + ", instance " + instancePath + " , delete old root: " + deleteOldRoot + "." );
+		this.logger.fine( "Request: perform action 'restore' in " + applicationName + ", instance " + instancePath + ", destination path " + destPath + ", delete old root: " + deleteOldRoot + "." );
 		Response response;
 		try {
 			ManagedApplication ma;
@@ -169,12 +171,54 @@ public class ApplicationWs implements IApplicationWs {
 			if(( ma = Manager.INSTANCE.getAppNameToManagedApplication().get( applicationName )) == null )
 				response = Response.status( Status.NOT_FOUND ).entity( "Application " + applicationName + " does not exist." ).build();
 
-			else if(( instance = InstanceHelpers.findInstanceByPath( ma.getApplication(), instancePath )) == null )
+			else if(( instance = InstanceHelpers.findInstanceByPath( ma.getApplication(), instancePath )) == null )	{
 				response = Response.status( Status.NOT_FOUND ).entity( "Instance " + instancePath + " was not found." ).build();
+			}
+			
+			else if( destPath == null || "".equals(destPath) ) {
+				response = Response.status( Status.NOT_FOUND ).entity( "Missing 'destPath' or destination path empty." ).build();
+			}
+			
+			else if( "-1".equals(deleteOldRoot) || "1".equals(deleteOldRoot) || "0".equals(deleteOldRoot) ) {	// restoration as a part of migration progress
+				List<String> instancesInPath = Utils.splitNicely(instancePath, "/");
+				instancesInPath.remove(0);
+				String componentsInPath = "";
+				String stringTemplateToCompare = "";
 
-			else if( "-1".equals(deleteOldRoot) || "1".equals(deleteOldRoot) || "0".equals(deleteOldRoot) ) {   
-				Manager.INSTANCE.restore( ma, instance, instancePath, deleteOldRoot );
-				response = Response.ok().build();
+				for (String i : instancesInPath ) {
+					Instance currentInstance = InstanceHelpers.findInstanceByName(ma.getApplication(), i);
+					String componentName = currentInstance.getComponent().getName();
+					componentsInPath = componentsInPath + "/instance_of_" + componentName;
+					stringTemplateToCompare = stringTemplateToCompare + "[/]{1}[^/]*";
+				}
+				
+				if ( !destPath.matches(stringTemplateToCompare) ) {
+					response = Response.status( Status.BAD_REQUEST ).entity( "The 'destPath' must follow template: " + componentsInPath ).build();
+				} else {
+					// Calculate where to put restored instance based on the destPath, recreate all instances on the path to the new one
+					List<String> instancesOnDestPath = Utils.splitNicely(destPath, "/");
+					instancesOnDestPath.remove(0);
+					Map<String,String> componentNameToInstancePath = new HashMap<String,String> ();
+					String cumulativePath = "";
+					
+					List<Instance> instancesOnInstancePath = InstanceHelpers.getAllInstancesInTheInstancePath(ma.getApplication(), instancePath);
+					int n = 0;
+					
+					for ( Instance i : instancesOnInstancePath ) {
+						List<Instance> allInstancesofCurrentComponent= InstanceHelpers.findInstancesByComponentName(ma.getApplication(), i.getComponent().getName() );
+						cumulativePath = cumulativePath + "/" + instancesOnDestPath.get(n);
+						componentNameToInstancePath.put(i.getComponent().getName(), cumulativePath);
+						for ( Instance j : allInstancesofCurrentComponent ) {
+							if ( componentNameToInstancePath.get(i.getComponent().getName()).equals(InstanceHelpers.computeInstancePath(j)) ) {
+								this.logger.info( "Instance " + instancePath + " in " + ma.getName() + " will be put on " + InstanceHelpers.computeInstancePath(j) + "." );
+							}
+						}
+							
+					}
+					
+					Manager.INSTANCE.restore( ma, instance, instancePath, destPath, deleteOldRoot );
+					response = Response.ok().build();
+				}
 				
 			} else {
 				response = Response.status( Status.BAD_REQUEST ).entity( "Invalid parameter delete-old-root: " + deleteOldRoot + " . It should only be '-1', '0' or '1'." ).build();

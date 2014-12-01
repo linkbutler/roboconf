@@ -80,6 +80,7 @@ public interface IApplicationWs {
 	 * @param applicationName the application name
 	 * @param action see {@link ApplicationAction}
 	 * @param instancePath the instance path (not null)
+	 * @param destPath the instance path where instance will be restored (not null)
 	 * @param deleteOldRoot: a String, if == 0, the old migrated instance will be removed; if == 1, the old root will be removed; 
 	 *                       if == -1, don't remove anything; otherwise fail
 	 * @return a response
@@ -87,7 +88,7 @@ public interface IApplicationWs {
 	@POST
 	@Path( "/restore" )
 	@Consumes( MediaType.APPLICATION_JSON )
-	Response restore( @PathParam("name") String applicationName, @QueryParam("instance-path") String instancePath, @QueryParam("delete-old-root") String deleteOldRoot );
+	Response restore( @PathParam("name") String applicationName, @QueryParam("instance-path") String instancePath, @QueryParam("dest-path") String destPath, @QueryParam("delete-old-root") String deleteOldRoot );
 	
 	
 	/**

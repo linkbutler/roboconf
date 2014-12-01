@@ -20,10 +20,14 @@ import java.io.File;
 import java.util.List;
 
 import junit.framework.Assert;
+
 import net.roboconf.core.model.helpers.InstanceHelpers;
+import net.roboconf.core.model.runtime.Component;
 import net.roboconf.core.model.runtime.Instance;
 import net.roboconf.core.model.runtime.Instance.InstanceStatus;
+import net.roboconf.core.utils.Utils;
 import net.roboconf.dm.internal.TestApplication;
+import net.roboconf.dm.management.exceptions.ImpossibleInsertionException;
 import net.roboconf.messaging.messages.Message;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceRestore;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceStop;
@@ -101,6 +105,45 @@ public class ManagedApplicationTest {
 		messages = this.ma.rootInstanceToAwaitingMessages.get( childInstance );
 		Assert.assertEquals( 1, messages.size());
 		Assert.assertEquals( MsgCmdInstanceUndeploy.class, messages.get( 0 ).getClass());
+	}
+	
+	
+	@Test
+	public void testDestPathValidation() throws ImpossibleInsertionException {
+		
+		Instance rootInstance = new Instance( "root" );
+		Component rootComponent = new Component( "vm" );
+		rootInstance.setComponent(rootComponent);
+		
+		Instance childInstance = new Instance( "child" );
+	    Component childComponent = new Component( "mysql" );
+	    childInstance.setComponent(childComponent);
+		
+	    InstanceHelpers.insertChild( rootInstance, childInstance );
+	    
+		Manager.INSTANCE.addInstance(ma, null, rootInstance);
+		
+		String instancePath = "/root/child";
+		String destPath = "/rootd/childd";
+		List<String> instancesInPath = Utils.splitNicely(instancePath, "/");
+		instancesInPath.remove(0);
+		String componentsInPath = "";
+		String stringTemplateToCompare = "";
+		String result = "";
+
+		for (String i : instancesInPath ) {
+			Instance currentInstance = InstanceHelpers.findInstanceByName(ma.getApplication(), i);
+			String componentName = currentInstance.getComponent().getName();
+			componentsInPath = componentsInPath + "/instance_of_" + componentName;
+			stringTemplateToCompare = stringTemplateToCompare + "[/]{1}[^/]*";
+		}
+		
+		if ( !destPath.matches(stringTemplateToCompare) ) result = "not match";
+		else result = "match";
+	
+		Assert.assertEquals( "[/]{1}[^/]*[/]{1}[^/]*", stringTemplateToCompare );
+		Assert.assertEquals( "/instance_of_vm/instance_of_mysql", componentsInPath );
+		Assert.assertEquals( "match", result );
 	}
 
 
