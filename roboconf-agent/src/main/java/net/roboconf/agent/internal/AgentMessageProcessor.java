@@ -163,7 +163,6 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 		
 		String instancePath = msg.getInstancePath();
 		String oldInstancePath = msg.getOldInstancePath();
-		String destPath = msg.getDestPath();
 		String deleteOldRoot = msg.getDeleteOldRoot();
 
 		if (instancePath == null || "".equals(instancePath)) {

@@ -260,9 +260,8 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 				} else {	// for back up as a part of migration progress
 					rootCopy = InstanceHelpers.duplicateAllInstancesOnTheInstancePathOf( instance );
 					try {
-						Manager.INSTANCE.addInstance(ma, null, rootCopy);  
-						Application appCopy = ma.getApplication();
-						Instance instanceCopy = InstanceHelpers.findInstanceByName(appCopy, copyInstanceName);
+						Manager.INSTANCE.addInstance(ma, null, rootCopy);
+						Instance instanceCopy = InstanceHelpers.findInstanceByName(ma.getApplication(), copyInstanceName);
 						Manager.INSTANCE.deployAll(ma, rootCopy);
 						Manager.INSTANCE.restore(ma, instanceCopy, instancePath, deleteOldRoot);
 						Manager.INSTANCE.start(ma, instanceCopy);

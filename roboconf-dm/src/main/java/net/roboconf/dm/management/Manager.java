@@ -545,18 +545,17 @@ public final class Manager {
 	 * @param ma the managed application
 	 * @param instance the instance to be restored (not null)
 	 * @param oldInstance the old instance which has just backed up (not null)
-	 * @param destPath destination path where instance will be restored (not null)
 	 * @param deleteOldRoot '-1' don't delete anything, '0' delete the backed up instance, '1' delete the root instance, otherwise fail
 	 * @throws IOException if an error occurred with the messaging
 	 */
-	public void restore( ManagedApplication ma, Instance instance, String oldInstancePath, String destPath, String deleteOldRoot ) throws IOException {
+	public void restore( ManagedApplication ma, Instance instance, String oldInstancePath, String deleteOldRoot ) throws IOException {
 
 		String instancePath = InstanceHelpers.computeInstancePath( instance );
-		this.logger.fine( "Restore " + instancePath + " in " + ma.getName() + " to" + destPath +"..." );
+		this.logger.fine( "Restore " + instancePath + " in " + ma.getName() + " to" + instance.getName() +"..." );
 		if( instance.getParent() != null ) {
-			MsgCmdInstanceRestore message = new MsgCmdInstanceRestore( instance, oldInstancePath, destPath, deleteOldRoot );
+			MsgCmdInstanceRestore message = new MsgCmdInstanceRestore( instance, oldInstancePath, deleteOldRoot );
 			send( ma, message, instance );
-			this.logger.fine( "A message was (or will be) sent to the agent to restore " + instancePath + " in " + ma.getName() + " to " + destPath + "." );
+			this.logger.fine( "A message was (or will be) sent to the agent to restore " + instancePath + " in " + ma.getName() + " to " + instance.getName() + "." );
 
 		} else {
 			this.logger.fine( "Restore action for " + instancePath + " is cancelled in " + ma.getName() + "." );
@@ -727,6 +726,50 @@ public final class Manager {
 			}
 		}
 	}
+	
+	
+	/**
+	 * Restore all the instances of an application.
+	 * @param ma an application
+	 * @param instance the instance from which we restore (not be null)
+	 * @param oldInstancePaths list of oldInstance Paths, size of list must be equal to number of instances counted from the 'instance', otherwise do nothing
+	 * @param deleteOldRoot see restore function
+	 * <p>
+	 * This instance and all its children will be restored.
+	 * </p>
+	 *
+	 * @throws IaasException if a problem occurred with the IaaS
+	 * @throws IOException if a problem occurred with the messaging
+	 */
+	public void restoreAll( ManagedApplication ma, Instance instance, List<String> oldInstance, String deleteOldRoot ) throws IaasException, IOException {
+		
+		Collection<Instance> initialInstances;
+		if( instance != null )
+			initialInstances = Arrays.asList( instance );
+		else
+			initialInstances = ma.getApplication().getRootInstances();
+		
+		for( Instance initialInstance : initialInstances ) {
+			List<Instance> hList = InstanceHelpers.buildHierarchicalList( initialInstance );
+			if( oldInstance.size() == hList.size() ) {
+				int count = 0;
+				for( Instance i : hList ) {
+					if( !(i.getParent() == null) && hList.indexOf(i) == (hList.size() -1) ) { 
+						restore( ma, i, oldInstance.get(count), deleteOldRoot );
+						this.logger.fine( "Request (oldInstance=" + oldInstance.get(count) + ", deleteOldRoot=" + deleteOldRoot + ") to run restore.sh of instance " + i.getName() + " was sent." );
+					}
+					else if( !(i.getParent() == null) && !(hList.indexOf(i) != (hList.size() -1)) ) {
+						restore( ma, i, oldInstance.get(count), "-1" );
+						this.logger.fine( "Request (oldInstance=" + oldInstance.get(count) + ", deleteOldRoot='-1') to run restore.sh of instance " + i.getName() + " was sent." );
+					}
+					count++;
+				}
+			} else {
+				this.logger.fine( "Size of 'oldInstance' list must be equal to number of instances counted from the initial instance " + initialInstance.getName() + "." );
+			}
+		}
+	}
+	
 
 
 	/**

@@ -311,6 +311,27 @@ public final class InstanceHelpers {
 		return returnInstances;
 	}
 	
+	
+	/**
+	 * Gets all instance paths of an instancePath
+	 * @param instancePath an instancePath (not null)
+	 * @return a non-null list of instances
+	 */
+	public static List<String> getAllInstancePathsOfInstancesInTheString( String instancePath ) {
+		
+		List<String> splittedInstancePath = Utils.splitNicely(instancePath, "/");
+		splittedInstancePath.remove(0);
+		List<String> returnInstancePaths = new ArrayList<String> ();
+		String stringToAdd = "";
+		
+		for (String i : splittedInstancePath ) {
+			stringToAdd = stringToAdd + "/" + i;
+			returnInstancePaths.add(stringToAdd);
+		}
+		
+		return returnInstancePaths;
+	}
+	
 
 	/**
 	 * Tries to insert a child instance.
@@ -471,6 +492,35 @@ public final class InstanceHelpers {
 				insertChild( parent, copy );
 
 			toProcess.addAll( current.getChildren());
+		}
+
+		return instanceToDuplicate.get( instance );
+	}
+	
+	
+	public static Instance duplicateInstanceChangeNamesStraightPath( Instance instance, List<String> namesToChange ) {
+
+		Map<Instance,Instance> instanceToDuplicate = new HashMap<Instance,Instance> ();
+		List<Instance> toProcess = new ArrayList<Instance> ();
+		toProcess.add( instance );
+		int count = 0;
+		
+		while( ! toProcess.isEmpty()) {
+			Instance current = toProcess.remove( 0 );
+
+			Instance copy = new Instance();
+			copy.name( namesToChange.get(count) );
+			copy.component( current.getComponent());
+			copy.channel( current.getChannel());
+			copy.getOverriddenExports().putAll( current.getOverriddenExports());
+			instanceToDuplicate.put( current, copy );
+
+			Instance parent = instanceToDuplicate.get( current.getParent());
+			if( parent != null )
+				insertChild( parent, copy );
+
+			toProcess.addAll( current.getChildren());
+			count++;
 		}
 
 		return instanceToDuplicate.get( instance );

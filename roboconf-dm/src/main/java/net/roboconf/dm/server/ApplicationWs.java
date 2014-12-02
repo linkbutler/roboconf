@@ -34,6 +34,7 @@ import net.roboconf.core.model.helpers.InstanceHelpers;
 import net.roboconf.core.model.runtime.Application;
 import net.roboconf.core.model.runtime.Component;
 import net.roboconf.core.model.runtime.Instance;
+import net.roboconf.core.model.runtime.Instance.InstanceStatus;
 import net.roboconf.core.utils.Utils;
 import net.roboconf.dm.management.ManagedApplication;
 import net.roboconf.dm.management.Manager;
@@ -165,13 +166,10 @@ public class ApplicationWs implements IApplicationWs {
 		this.logger.fine( "Request: perform action 'restore' in " + applicationName + ", instance " + instancePath + ", destination path " + destPath + ", delete old root: " + deleteOldRoot + "." );
 		Response response;
 		try {
-			ManagedApplication ma;
-			Instance instance;
+			ManagedApplication ma = Manager.INSTANCE.getAppNameToManagedApplication().get( applicationName );
+			Instance instance = InstanceHelpers.findInstanceByPath( ma.getApplication(), instancePath );
 
-			if(( ma = Manager.INSTANCE.getAppNameToManagedApplication().get( applicationName )) == null )
-				response = Response.status( Status.NOT_FOUND ).entity( "Application " + applicationName + " does not exist." ).build();
-
-			else if(( instance = InstanceHelpers.findInstanceByPath( ma.getApplication(), instancePath )) == null )	{
+			if( instance == null )	{
 				response = Response.status( Status.NOT_FOUND ).entity( "Instance " + instancePath + " was not found." ).build();
 			}
 			
@@ -203,20 +201,41 @@ public class ApplicationWs implements IApplicationWs {
 					
 					List<Instance> instancesOnInstancePath = InstanceHelpers.getAllInstancesInTheInstancePath(ma.getApplication(), instancePath);
 					int n = 0;
+					Instance rootOfBranch = null;
 					
 					for ( Instance i : instancesOnInstancePath ) {
-						List<Instance> allInstancesofCurrentComponent= InstanceHelpers.findInstancesByComponentName(ma.getApplication(), i.getComponent().getName() );
+						String componentName = i.getComponent().getName();
+						List<Instance> allInstancesofCurrentComponent= InstanceHelpers.findInstancesByComponentName(ma.getApplication(), componentName );
 						cumulativePath = cumulativePath + "/" + instancesOnDestPath.get(n);
-						componentNameToInstancePath.put(i.getComponent().getName(), cumulativePath);
+						componentNameToInstancePath.put( componentName, cumulativePath );
+						boolean immediateQuit = false; 
+						
 						for ( Instance j : allInstancesofCurrentComponent ) {
-							if ( componentNameToInstancePath.get(i.getComponent().getName()).equals(InstanceHelpers.computeInstancePath(j)) ) {
+							if ( componentNameToInstancePath.get(componentName).equals(InstanceHelpers.computeInstancePath(j)) ) {
 								this.logger.info( "Instance " + instancePath + " in " + ma.getName() + " will be put on " + InstanceHelpers.computeInstancePath(j) + "." );
+								if ( n == instancesOnInstancePath.size() - 1 ) {	// insPath coincidence destPath
+									if ( i.getStatus() == InstanceStatus.NOT_DEPLOYED ) {	
+										Manager.INSTANCE.restore( ma, i, instancePath, "-1" );	// restore only i and force deleteOldRoot to '-1'
+									} else {
+										response = Response.status( Status.BAD_REQUEST ).entity( "Instance " + i.getName() + " must be in 'NOT_DEPLOYED' state in this case." ).build();
+									}
+								}
+								break;
+							} else {
+								this.logger.info( "Instance " + instancePath + " in " + ma.getName() + " will be put on new instances beginning from " + InstanceHelpers.computeInstancePath(j) + "." );
+								rootOfBranch = InstanceHelpers.duplicateInstanceChangeNamesStraightPath( i, instancesOnDestPath );
+								Manager.INSTANCE.addInstance( ma, i.getParent(), rootOfBranch );
+								Manager.INSTANCE.deployAll( ma, rootOfBranch );
+								List<String> oldInstancePaths = InstanceHelpers.getAllInstancePathsOfInstancesInTheString(instancePath);
+								Manager.INSTANCE.restoreAll( ma, rootOfBranch, oldInstancePaths, deleteOldRoot );
+								Manager.INSTANCE.start( ma, rootOfBranch );
+								immediateQuit = true;
+								break;
 							}
 						}
-							
-					}
-					
-					Manager.INSTANCE.restore( ma, instance, instancePath, destPath, deleteOldRoot );
+						if (immediateQuit) break;
+						n++;
+					}	
 					response = Response.ok().build();
 				}
 				
