@@ -503,13 +503,13 @@ public final class InstanceHelpers {
 		Map<Instance,Instance> instanceToDuplicate = new HashMap<Instance,Instance> ();
 		List<Instance> toProcess = new ArrayList<Instance> ();
 		toProcess.add( instance );
-		int count = 0;
-		
+		System.out.println( "namesToChange size: " + namesToChange.size() );
 		while( ! toProcess.isEmpty()) {
 			Instance current = toProcess.remove( 0 );
 
 			Instance copy = new Instance();
-			copy.name( namesToChange.get(count) );
+			copy.name( namesToChange.get(0).toString() );
+			System.out.println( "Name To change: " + namesToChange.get(0).toString() );
 			copy.component( current.getComponent());
 			copy.channel( current.getChannel());
 			copy.getOverriddenExports().putAll( current.getOverriddenExports());
@@ -520,7 +520,7 @@ public final class InstanceHelpers {
 				insertChild( parent, copy );
 
 			toProcess.addAll( current.getChildren());
-			count++;
+			namesToChange.remove(0);
 		}
 
 		return instanceToDuplicate.get( instance );

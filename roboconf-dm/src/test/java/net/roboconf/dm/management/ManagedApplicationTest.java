@@ -20,7 +20,6 @@ import java.io.File;
 import java.util.List;
 
 import junit.framework.Assert;
-
 import net.roboconf.core.model.helpers.InstanceHelpers;
 import net.roboconf.core.model.runtime.Component;
 import net.roboconf.core.model.runtime.Instance;
@@ -144,6 +143,35 @@ public class ManagedApplicationTest {
 		Assert.assertEquals( "[/]{1}[^/]*[/]{1}[^/]*", stringTemplateToCompare );
 		Assert.assertEquals( "/instance_of_vm/instance_of_mysql", componentsInPath );
 		Assert.assertEquals( "match", result );
+	}
+	
+	
+	@Test
+	public void testDuplicateInstancesChangeNamesStraightPath() throws ImpossibleInsertionException {
+		
+		Instance rootInstance = new Instance( "vm1" );
+		Component rootComponent = new Component( "vm" );
+		rootInstance.setComponent(rootComponent);
+		
+		Instance childInstance = new Instance( "tomcat" );
+	    Component childComponent = new Component( "tomcat" );
+	    childInstance.setComponent(childComponent);
+	    
+	    Instance grandChildInstance = new Instance( "rubis" );
+	    Component grandChildComponent = new Component( "rubis" );
+	    grandChildInstance.setComponent(grandChildComponent);
+		
+	    InstanceHelpers.insertChild( childInstance, grandChildInstance );
+	    InstanceHelpers.insertChild( rootInstance, childInstance );
+	    
+		Manager.INSTANCE.addInstance(ma, null, rootInstance);
+		String destPath = "/vm2/tomcat/rubis";
+		List<String> instanceNamesOnDestPath = Utils.splitNicely(destPath, "/");
+		instanceNamesOnDestPath.remove(0);
+		Instance rootOfBranch = InstanceHelpers.duplicateInstanceChangeNamesStraightPath( rootInstance, instanceNamesOnDestPath );
+	
+		Assert.assertEquals( "vm2", rootOfBranch.getName() );
+		//Assert.assertEquals( grandChildInstance, rootOfBranch.getChildren().remove(0) );
 	}
 
 

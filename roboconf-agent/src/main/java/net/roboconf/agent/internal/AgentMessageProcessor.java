@@ -43,7 +43,6 @@ import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceBackedup
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceChanged;
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceMigrated;
 import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceRemoved;
-import net.roboconf.messaging.messages.from_agent_to_dm.MsgNotifInstanceRestored;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceAdd;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceBackup;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceDeploy;
@@ -165,7 +164,7 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 		String oldInstancePath = msg.getOldInstancePath();
 		String deleteOldRoot = msg.getDeleteOldRoot();
 
-		if (instancePath == null || "".equals(instancePath)) {
+		if (instancePath == null || "".equals(instancePath)) {	// if cannot find this instance in the app, update states of all other instances to the DM
 			for( Instance i : InstanceHelpers.buildHierarchicalList( this.rootInstance ))
 				this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceChanged( this.appName, i ));
 			result = true;
@@ -200,29 +199,16 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 	
 			// Otherwise, process it
 			else {
-				if (deleteOldRoot == null) {	// for restore operation only
-					try {
-						plugin.restore( instance, oldInstancePath );
-						this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceRestored( this.appName, instance, oldInstancePath, deleteOldRoot ));
-						this.logger.fine( "Instance " + instancePath + " was restored from the " + oldInstancePath + ". A notification sent back to the DM." );
-						result = true;
+				try {
+					plugin.restore( instance, oldInstancePath );
+					this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceMigrated( this.appName, instance, oldInstancePath, deleteOldRoot ));
+					this.logger.fine( "Instance " + instancePath + " was restored from the " + oldInstancePath + ". A notification sent back to the DM with 'deleteOldRoot'=" + deleteOldRoot + "." );
+					result = true;
 		
-					} catch( Exception e ) {
-						this.logger.severe( "An error occured while restoring" + msg.getInstancePath());
-						this.logger.finest( Utils.writeException( e ));
-					}
-				} else {	// for restore as a part of migration progress
-					try {
-						plugin.restore( instance, oldInstancePath );
-						this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceMigrated( this.appName, instance, oldInstancePath, deleteOldRoot ));
-						this.logger.fine( "Instance " + instancePath + " was migrated from the " + oldInstancePath + ". A notification sent back to the DM." );
-						result = true;
-		
-					} catch( Exception e ) {
-						this.logger.severe( "An error occured while restoring" + msg.getInstancePath());
-						this.logger.finest( Utils.writeException( e ));
-					}
-				}
+				} catch( Exception e ) {
+					this.logger.severe( "An error occured while restoring" + instancePath );
+					this.logger.finest( Utils.writeException( e ));
+				}				
 			}
 		}
 		return result;

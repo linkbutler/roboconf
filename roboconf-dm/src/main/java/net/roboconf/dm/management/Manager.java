@@ -555,10 +555,10 @@ public final class Manager {
 		if( instance.getParent() != null ) {
 			MsgCmdInstanceRestore message = new MsgCmdInstanceRestore( instance, oldInstancePath, deleteOldRoot );
 			send( ma, message, instance );
-			this.logger.fine( "A message was (or will be) sent to the agent to restore " + instancePath + " in " + ma.getName() + " to " + instance.getName() + "." );
+			this.logger.fine( "A message was (or will be) sent to the agent to restore " + oldInstancePath + " in " + ma.getName() + " to " + instance.getName() + "." );
 
 		} else {
-			this.logger.fine( "Restore action for " + instancePath + " is cancelled in " + ma.getName() + "." );
+			this.logger.fine( "Restore action for " + oldInstancePath + " is cancelled in " + ma.getName() + "." );
 		}
 	}
 
@@ -729,6 +729,36 @@ public final class Manager {
 	
 	
 	/**
+	 * Starts all the instances of an application, except root instances.
+	 * @param ma an application
+	 * @param instance the instance from which we start (can be null)
+	 * <p>
+	 * This instance and all its children will be started.
+	 * If null, then all the application instances are considered.
+	 * </p>
+	 *
+	 * @throws IaasException if a problem occurred with the IaaS
+	 * @throws IOException if a problem occurred with the messaging
+	 */
+	public void startAll( ManagedApplication ma, Instance instance ) throws IaasException, IOException {
+
+		Collection<Instance> initialInstances;
+		if( instance != null )
+			initialInstances = Arrays.asList( instance );
+		else
+			initialInstances = ma.getApplication().getRootInstances();
+
+		for( Instance initialInstance : initialInstances ) {
+			for( Instance i : InstanceHelpers.buildHierarchicalList( initialInstance )) {
+				if( !(i.getParent() == null) ) {
+					start( ma, i );
+				}
+			}
+		}
+	}
+	
+	
+	/**
 	 * Restore all the instances of an application.
 	 * @param ma an application
 	 * @param instance the instance from which we restore (not be null)
@@ -752,17 +782,16 @@ public final class Manager {
 		for( Instance initialInstance : initialInstances ) {
 			List<Instance> hList = InstanceHelpers.buildHierarchicalList( initialInstance );
 			if( oldInstance.size() == hList.size() ) {
-				int count = 0;
 				for( Instance i : hList ) {
 					if( !(i.getParent() == null) && hList.indexOf(i) == (hList.size() -1) ) { 
-						restore( ma, i, oldInstance.get(count), deleteOldRoot );
-						this.logger.fine( "Request (oldInstance=" + oldInstance.get(count) + ", deleteOldRoot=" + deleteOldRoot + ") to run restore.sh of instance " + i.getName() + " was sent." );
+						restore( ma, i, oldInstance.get(0).toString(), deleteOldRoot );
+						this.logger.fine( "Request (oldInstance=" + oldInstance.get(0).toString() + ", deleteOldRoot=" + deleteOldRoot + ") to run restore.sh of instance " + i.getName() + " was sent." );
 					}
-					else if( !(i.getParent() == null) && !(hList.indexOf(i) != (hList.size() -1)) ) {
-						restore( ma, i, oldInstance.get(count), "-1" );
-						this.logger.fine( "Request (oldInstance=" + oldInstance.get(count) + ", deleteOldRoot='-1') to run restore.sh of instance " + i.getName() + " was sent." );
+					else if( !(i.getParent() == null) && !(hList.indexOf(i) == (hList.size() -1)) ) {
+						restore( ma, i, oldInstance.get(0).toString(), "-1" );
+						this.logger.fine( "Request (oldInstance=" + oldInstance.get(0).toString() + ", deleteOldRoot='-1') to run restore.sh of instance " + i.getName() + " was sent." );
 					}
-					count++;
+					oldInstance.remove(0);
 				}
 			} else {
 				this.logger.fine( "Size of 'oldInstance' list must be equal to number of instances counted from the initial instance " + initialInstance.getName() + "." );
