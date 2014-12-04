@@ -362,11 +362,13 @@ public final class InstanceHelpers {
 		boolean hasAlreadyAChildWithThisName = false;
 		for( Instance inst : list ) {
 			if(( hasAlreadyAChildWithThisName = childInstance.getName().equals( inst.getName())))
+				System.out.println( "hasAlreadyAChildWithThisName" );
 				break;
 		}
 
 		// We insert a "root instance"
 		if( parentInstance == null ) {
+			System.out.println( "parentInstance=null" );
 			if( ! hasAlreadyAChildWithThisName
 					&& childInstance.getComponent().getAncestors().isEmpty()) {
 
@@ -378,16 +380,20 @@ public final class InstanceHelpers {
 
 		// We insert a child instance
 		else {
+			System.out.println( "parentInstance!=null" );
 			if( ! hasAlreadyAChildWithThisName
 					&& parentInstance.getComponent().getChildren().contains( childInstance.getComponent())) {
-
+				
 				InstanceHelpers.insertChild( parentInstance, childInstance );
+				System.out.println( "Insertchild success!" );
 				Collection<RoboconfError> errors = RuntimeModelValidator.validate( application.getRootInstances());
 				if( RoboconfErrorHelpers.containsCriticalErrors( errors )) {
 					childInstance.setParent( null );
 					parentInstance.getChildren().remove( childInstance );
+					System.out.println( "not validation" );
 
 				} else {
+					System.out.println( "Validated!" );
 					success = true;
 				}
 			}

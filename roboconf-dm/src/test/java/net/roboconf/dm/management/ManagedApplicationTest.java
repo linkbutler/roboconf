@@ -17,9 +17,11 @@
 package net.roboconf.dm.management;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 import junit.framework.Assert;
+import net.roboconf.core.model.helpers.ComponentHelpers;
 import net.roboconf.core.model.helpers.InstanceHelpers;
 import net.roboconf.core.model.runtime.Component;
 import net.roboconf.core.model.runtime.Instance;
@@ -27,6 +29,7 @@ import net.roboconf.core.model.runtime.Instance.InstanceStatus;
 import net.roboconf.core.utils.Utils;
 import net.roboconf.dm.internal.TestApplication;
 import net.roboconf.dm.management.exceptions.ImpossibleInsertionException;
+import net.roboconf.iaas.api.IaasException;
 import net.roboconf.messaging.messages.Message;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceRestore;
 import net.roboconf.messaging.messages.from_dm_to_agent.MsgCmdInstanceStop;
@@ -147,7 +150,7 @@ public class ManagedApplicationTest {
 	
 	
 	@Test
-	public void testDuplicateInstancesChangeNamesStraightPath() throws ImpossibleInsertionException {
+	public void testDuplicateInstancesChangeNamesStraightPath() throws ImpossibleInsertionException, IaasException, IOException {
 		
 		Instance rootInstance = new Instance( "vm1" );
 		Component rootComponent = new Component( "vm" );
@@ -160,18 +163,27 @@ public class ManagedApplicationTest {
 	    Instance grandChildInstance = new Instance( "rubis" );
 	    Component grandChildComponent = new Component( "rubis" );
 	    grandChildInstance.setComponent(grandChildComponent);
+	    
+	    ComponentHelpers.insertChild(childComponent, grandChildComponent);
+	    ComponentHelpers.insertChild(rootComponent, childComponent);
 		
 	    InstanceHelpers.insertChild( childInstance, grandChildInstance );
 	    InstanceHelpers.insertChild( rootInstance, childInstance );
 	    
 		Manager.INSTANCE.addInstance(ma, null, rootInstance);
-		String destPath = "/vm2/tomcat/rubis";
+		String destPath = "/vm1/tomcat1/rubis";
 		List<String> instanceNamesOnDestPath = Utils.splitNicely(destPath, "/");
 		instanceNamesOnDestPath.remove(0);
-		Instance rootOfBranch = InstanceHelpers.duplicateInstanceChangeNamesStraightPath( rootInstance, instanceNamesOnDestPath );
+		instanceNamesOnDestPath.remove(0);
+		//instanceNamesOnDestPath.remove(0);
+		Instance rootOfBranch = InstanceHelpers.duplicateInstanceChangeNamesStraightPath( childInstance, instanceNamesOnDestPath );
+		rootOfBranch.setParent(childInstance.getParent());
+		Manager.INSTANCE.addInstance( ma, childInstance.getParent(), rootOfBranch );
 	
-		Assert.assertEquals( "vm2", rootOfBranch.getName() );
-		//Assert.assertEquals( grandChildInstance, rootOfBranch.getChildren().remove(0) );
+		Assert.assertEquals( "tomcat1", rootOfBranch.getName());
+		Assert.assertEquals( "vm1", rootOfBranch.getParent().getName());
+		Instance seekInstance = InstanceHelpers.findInstanceByPath(ma.getApplication(), "/vm1/tomcat");
+		Assert.assertEquals( "tomcat", seekInstance.getName() );
 	}
 
 

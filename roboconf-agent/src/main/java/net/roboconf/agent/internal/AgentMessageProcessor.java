@@ -358,10 +358,11 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 			Instance parentInstance = InstanceHelpers.findInstanceByPath( this.rootInstance, parentInstancePath );
 			if( parentInstance == null )
 				this.logger.severe( "No instance matched " + parentInstancePath + " on the agent. Request to add " + newInstance.getName() + " is dropped." );
-			else if( ! InstanceHelpers.tryToInsertChildInstance( null, parentInstance, newInstance ))
-				this.logger.severe( "Instance " + newInstance.getName() + " could not be inserted under " + parentInstancePath + ". Request is dropped." );
+			//else if( ! InstanceHelpers.tryToInsertChildInstance( null, parentInstance, newInstance ))
+				//this.logger.severe( "Instance " + newInstance.getName() + " could not be inserted under " + parentInstancePath + ". Request is dropped." );
 			else {
-				this.logger.fine( "Instance " + newInstance.getName() + " was successfully under " + parentInstancePath + "." );
+				this.logger.info( "Instance " + newInstance.getName() + " was successfully under " + parentInstancePath + "." );
+				InstanceHelpers.insertChild( parentInstance, newInstance );
 				instancesToProcess.add( newInstance );
 				result = true;
 			}

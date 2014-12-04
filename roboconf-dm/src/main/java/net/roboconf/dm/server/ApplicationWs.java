@@ -206,35 +206,53 @@ public class ApplicationWs implements IApplicationWs {
 					List<Instance> instancesOnInstancePath = InstanceHelpers.getAllInstancesInTheInstancePath(ma.getApplication(), instancePath);
 					int n = 0;
 					Instance rootOfBranch = null;
+					Response responseInCase = null;
 					
 					for ( Instance i : instancesOnInstancePath ) {
 						String componentName = i.getComponent().getName();
 						List<Instance> allInstancesofCurrentComponent= InstanceHelpers.findInstancesByComponentName(ma.getApplication(), componentName );
 						cumulativePath = cumulativePath + "/" + instanceNamesOnDestPath.get(0).toString();
 						componentNameToInstancePath.put( componentName, cumulativePath );
-						boolean immediateQuit = false; 
+						boolean immediateQuit = false;
 						
 						for ( Instance j : allInstancesofCurrentComponent ) {
 							if ( componentNameToInstancePath.get(componentName).equals(InstanceHelpers.computeInstancePath(j)) ) {
-								this.logger.info( "Instance " + instancePath + " in " + ma.getName() + " will be put on an existing instance" + InstanceHelpers.computeInstancePath(j) + "." );
+								this.logger.info( "Instance " + instancePath + " in " + ma.getName() + " will be put on an existing instancePath=" + InstanceHelpers.computeInstancePath(j) + "." );
 								if ( n == instancesOnInstancePath.size() - 1 ) {	// insPath coincidence destPath
 									if ( i.getStatus() == InstanceStatus.DEPLOYED_STOPPED ) {	
 										Manager.INSTANCE.restore( ma, i, instancePath, "-1" );	// restore only i and force deleteOldRoot to '-1'
+										Manager.INSTANCE.start( ma, i );
+										responseInCase = Response.ok().build();
 									} else {
-										response = Response.status( Status.BAD_REQUEST ).entity( "Instance " + i.getName() + " must be in 'NOT_DEPLOYED' state in this case." ).build();
+										responseInCase = Response.status( Status.BAD_REQUEST ).entity( "Instance " + i.getName() + " must be in 'NOT_DEPLOYED' state in this case." ).build();
 									}
 								}
 								break;
 							} else {
-								this.logger.info( "Instance " + instancePath + " in " + ma.getName() + " will be put on an instances " + cumulativePath + "." );
+								this.logger.info( "Instance " + instancePath + " in " + ma.getName() + " will be put on a new instancePath=" + cumulativePath + "." );
 								this.logger.info( "First instance name on destPath=" + instanceNamesOnDestPath.get(0).toString() + "." );
 								rootOfBranch = InstanceHelpers.duplicateInstanceChangeNamesStraightPath( i, instanceNamesOnDestPath );
-								Manager.INSTANCE.addInstance( ma, i.getParent(), rootOfBranch );
-								Manager.INSTANCE.deployAll( ma, rootOfBranch );
+								this.logger.info( "rootOfBranch=" + rootOfBranch.getName() + "." );
+								//this.logger.info( "n=" + n + " parent of i=" + i.getParent().getName() + "." );
+								if( n == 0 ) {
+									this.logger.info( "n=" + n );
+									Manager.INSTANCE.addInstance( ma, null, rootOfBranch );	// n==0 means 'i' is a rootInstance, otherwise it's not
+								}
+								else {
+									this.logger.info( "n=" + n + " parent of i=" + i.getParent().getName() + "." );
+									//InstanceHelpers.insertChild( i.getParent(), rootOfBranch );
+									rootOfBranch.setParent(i.getParent());
+									Manager.INSTANCE.addInstance( ma, i.getParent(), rootOfBranch );	// n==0 means 'i' is a rootInstance, otherwise it's not
+								}
+								this.logger.info( "rootOfBranchinMa=" + InstanceHelpers.findInstanceByPath(ma.getApplication(), InstanceHelpers.computeInstancePath(rootOfBranch)).getName() );
+								Instance rootOfBranchinMa = InstanceHelpers.findInstanceByPath( ma.getApplication(), InstanceHelpers.computeInstancePath(rootOfBranch) );
+								Manager.INSTANCE.deployAll( ma, rootOfBranchinMa );
 								List<String> oldInstancePaths = InstanceHelpers.getAllInstancePathsOfInstancesInTheString(instancePath);
-								Manager.INSTANCE.restoreAll( ma, rootOfBranch, oldInstancePaths, deleteOldRoot );
-								Manager.INSTANCE.startAll( ma, rootOfBranch );
+								this.logger.info( "oldInstancePaths=" + oldInstancePaths.toString() );
+								Manager.INSTANCE.restoreAll( ma, rootOfBranchinMa, oldInstancePaths, deleteOldRoot );
+								Manager.INSTANCE.startAll( ma, rootOfBranchinMa );
 								immediateQuit = true;
+								responseInCase = Response.ok().build();
 								break;
 							}
 						}
@@ -242,7 +260,7 @@ public class ApplicationWs implements IApplicationWs {
 						instanceNamesOnDestPath.remove(0);
 						n++;
 					}	
-					response = Response.ok().build();
+					response = responseInCase;
 				}
 				
 			} else {
