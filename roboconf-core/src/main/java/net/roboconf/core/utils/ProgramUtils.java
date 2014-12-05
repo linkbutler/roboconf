@@ -56,7 +56,7 @@ public final class ProgramUtils {
 			final Map<String,String> environmentVars )
 	throws IOException, InterruptedException {
 
-		logger.fine( "Executing command: " + Arrays.toString( command ));
+		logger.info( "Executing command: " + Arrays.toString( command ));
 
 		ProcessBuilder pb = new ProcessBuilder( command );
 		Map<String,String> env = pb.environment();

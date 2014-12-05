@@ -551,14 +551,14 @@ public final class Manager {
 	public void restore( ManagedApplication ma, Instance instance, String oldInstancePath, String deleteOldRoot ) throws IOException {
 
 		String instancePath = InstanceHelpers.computeInstancePath( instance );
-		this.logger.fine( "Restore " + instancePath + " in " + ma.getName() + " to" + instance.getName() +"..." );
+		this.logger.info( "Restore " + instancePath + " in " + ma.getName() + " to " + instance.getName() +"..." );
 		if( instance.getParent() != null ) {
 			MsgCmdInstanceRestore message = new MsgCmdInstanceRestore( instance, oldInstancePath, deleteOldRoot );
 			send( ma, message, instance );
-			this.logger.fine( "A message was (or will be) sent to the agent to restore " + oldInstancePath + " in " + ma.getName() + " to " + instance.getName() + "." );
+			this.logger.info( "A message was (or will be) sent to the agent to restore " + oldInstancePath + " in " + ma.getName() + " to " + instance.getName() + "." );
 
 		} else {
-			this.logger.fine( "Restore action for " + oldInstancePath + " is cancelled in " + ma.getName() + "." );
+			this.logger.severe( "Restore action for " + oldInstancePath + " is cancelled in " + ma.getName() + "." );
 		}
 	}
 
@@ -783,18 +783,17 @@ public final class Manager {
 			List<Instance> hList = InstanceHelpers.buildHierarchicalList( initialInstance );
 			if( oldInstance.size() == hList.size() ) {
 				for( Instance i : hList ) {
-					if( !(i.getParent() == null) && hList.indexOf(i) == (hList.size() -1) ) { 
-						restore( ma, i, oldInstance.get(0).toString(), deleteOldRoot );
-						this.logger.fine( "Request (oldInstance=" + oldInstance.get(0).toString() + ", deleteOldRoot=" + deleteOldRoot + ") to run restore.sh of instance " + i.getName() + " was sent." );
+					if( !(i.getParent() == null) && hList.indexOf(i) == (hList.size() -1) ) {
+						this.logger.info( "Request (oldInstance=" + oldInstance.get(0).toString() + ", deleteOldRoot=" + deleteOldRoot + ") to run restore.sh of instance " + i.getName() + " was sent." );
+						restore( ma, i, oldInstance.remove(0).toString(), deleteOldRoot );
 					}
 					else if( !(i.getParent() == null) && !(hList.indexOf(i) == (hList.size() -1)) ) {
-						restore( ma, i, oldInstance.get(0).toString(), "-1" );
-						this.logger.fine( "Request (oldInstance=" + oldInstance.get(0).toString() + ", deleteOldRoot='-1') to run restore.sh of instance " + i.getName() + " was sent." );
+						this.logger.info( "Request (oldInstance=" + oldInstance.get(0).toString() + ", deleteOldRoot='-1') to run restore.sh of instance " + i.getName() + " was sent." );
+						restore( ma, i, oldInstance.remove(0).toString(), "-1" );
 					}
-					oldInstance.remove(0);
 				}
 			} else {
-				this.logger.fine( "Size of 'oldInstance' list must be equal to number of instances counted from the initial instance " + initialInstance.getName() + "." );
+				this.logger.severe( "Size of 'oldInstance' list must be equal to number of instances counted from the initial instance " + initialInstance.getName() + "." );
 			}
 		}
 	}

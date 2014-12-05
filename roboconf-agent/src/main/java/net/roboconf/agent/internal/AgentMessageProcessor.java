@@ -202,12 +202,12 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 				try {
 					plugin.restore( instance, oldInstancePath );
 					this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceMigrated( this.appName, instance, oldInstancePath, deleteOldRoot ));
-					this.logger.fine( "Instance " + instancePath + " was restored from the " + oldInstancePath + ". A notification sent back to the DM with 'deleteOldRoot'=" + deleteOldRoot + "." );
+					this.logger.info( "Instance " + instancePath + " was restored from the " + oldInstancePath + ". A notification sent back to the DM with 'deleteOldRoot'=" + deleteOldRoot + "." );
 					result = true;
 		
 				} catch( Exception e ) {
 					this.logger.severe( "An error occured while restoring" + instancePath );
-					this.logger.finest( Utils.writeException( e ));
+					this.logger.severe( Utils.writeException( e ));
 				}				
 			}
 		}
@@ -447,7 +447,7 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 			this.logger.severe( "No plug-in was found to deploy " + msg.getInstancePath() + "." );
 
 		} else {
-			this.logger.fine( "Deploying instance " + msg.getInstancePath() + "." );
+			this.logger.info( "Deploying instance " + msg.getInstancePath() + "." );
 
 			// User reporting => deploying...
 			instance.setStatus( InstanceStatus.DEPLOYING );
@@ -469,7 +469,7 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 
 			} catch( Exception e ) {
 				this.logger.severe( "An error occured while deploying " + msg.getInstancePath());
-				this.logger.finest( Utils.writeException( e ));
+				this.logger.severe( Utils.writeException( e ));
 
 				instance.setStatus( InstanceStatus.NOT_DEPLOYED );
 				this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceChanged( this.appName, instance ));

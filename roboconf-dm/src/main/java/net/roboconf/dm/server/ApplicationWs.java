@@ -220,7 +220,7 @@ public class ApplicationWs implements IApplicationWs {
 								this.logger.info( "Instance " + instancePath + " in " + ma.getName() + " will be put on an existing instancePath=" + InstanceHelpers.computeInstancePath(j) + "." );
 								if ( n == instancesOnInstancePath.size() - 1 ) {	// insPath coincidence destPath
 									if ( i.getStatus() == InstanceStatus.DEPLOYED_STOPPED ) {	
-										Manager.INSTANCE.restore( ma, i, instancePath, "-1" );	// restore only i and force deleteOldRoot to '-1'
+										//Manager.INSTANCE.restore( ma, i, instancePath, "-1" );	// restore only i and force deleteOldRoot to '-1'
 										Manager.INSTANCE.start( ma, i );
 										responseInCase = Response.ok().build();
 									} else {
@@ -231,7 +231,9 @@ public class ApplicationWs implements IApplicationWs {
 							} else {
 								this.logger.info( "Instance " + instancePath + " in " + ma.getName() + " will be put on a new instancePath=" + cumulativePath + "." );
 								this.logger.info( "First instance name on destPath=" + instanceNamesOnDestPath.get(0).toString() + "." );
-								rootOfBranch = InstanceHelpers.duplicateInstanceChangeNamesStraightPath( i, instanceNamesOnDestPath );
+								List<Instance> instancesToDuplicate = new ArrayList<Instance>();
+								for(int runner=n; runner<instancesOnInstancePath.size(); runner++) instancesToDuplicate.add( instancesOnInstancePath.get(runner) );
+								rootOfBranch = InstanceHelpers.duplicateInstanceChangeNamesStraightPath( instancesToDuplicate, instanceNamesOnDestPath );
 								this.logger.info( "rootOfBranch=" + rootOfBranch.getName() + "." );
 								//this.logger.info( "n=" + n + " parent of i=" + i.getParent().getName() + "." );
 								if( n == 0 ) {
@@ -241,15 +243,16 @@ public class ApplicationWs implements IApplicationWs {
 								else {
 									this.logger.info( "n=" + n + " parent of i=" + i.getParent().getName() + "." );
 									//InstanceHelpers.insertChild( i.getParent(), rootOfBranch );
-									rootOfBranch.setParent(i.getParent());
+									rootOfBranch.parent(i.getParent());
 									Manager.INSTANCE.addInstance( ma, i.getParent(), rootOfBranch );	// n==0 means 'i' is a rootInstance, otherwise it's not
 								}
 								this.logger.info( "rootOfBranchinMa=" + InstanceHelpers.findInstanceByPath(ma.getApplication(), InstanceHelpers.computeInstancePath(rootOfBranch)).getName() );
 								Instance rootOfBranchinMa = InstanceHelpers.findInstanceByPath( ma.getApplication(), InstanceHelpers.computeInstancePath(rootOfBranch) );
 								Manager.INSTANCE.deployAll( ma, rootOfBranchinMa );
-								List<String> oldInstancePaths = InstanceHelpers.getAllInstancePathsOfInstancesInTheString(instancePath);
+								List<String> oldInstancePaths = new ArrayList<String>();
+								for(int runner=n; runner<instancesOnInstancePath.size(); runner++) oldInstancePaths.add( InstanceHelpers.computeInstancePath(instancesOnInstancePath.get(runner)) );
 								this.logger.info( "oldInstancePaths=" + oldInstancePaths.toString() );
-								Manager.INSTANCE.restoreAll( ma, rootOfBranchinMa, oldInstancePaths, deleteOldRoot );
+								//Manager.INSTANCE.restoreAll( ma, rootOfBranchinMa, oldInstancePaths, deleteOldRoot );
 								Manager.INSTANCE.startAll( ma, rootOfBranchinMa );
 								immediateQuit = true;
 								responseInCase = Response.ok().build();

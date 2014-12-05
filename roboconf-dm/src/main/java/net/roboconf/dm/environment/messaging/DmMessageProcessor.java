@@ -257,7 +257,7 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 				if ( deleteOldRoot == null ) {	// only back up
 					this.logger.info( "Instance: " + instancePath + " was backed up succesfully." );
 				} else {	// for back up as a part of migration progress
-					rootCopy = InstanceHelpers.duplicateAllInstancesOnTheInstancePathOf( instance );
+					rootCopy = InstanceHelpers.duplicateAllInstancesOnTheInstancePathOf( instance, "_migrated" );
 					try {
 						Manager.INSTANCE.addInstance(ma, null, rootCopy);
 						Instance instanceCopy = InstanceHelpers.findInstanceByName(ma.getApplication(), copyInstanceName);

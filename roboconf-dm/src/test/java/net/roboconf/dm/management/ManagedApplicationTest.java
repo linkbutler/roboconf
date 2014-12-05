@@ -18,6 +18,7 @@ package net.roboconf.dm.management;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import junit.framework.Assert;
@@ -176,14 +177,18 @@ public class ManagedApplicationTest {
 		instanceNamesOnDestPath.remove(0);
 		instanceNamesOnDestPath.remove(0);
 		//instanceNamesOnDestPath.remove(0);
-		Instance rootOfBranch = InstanceHelpers.duplicateInstanceChangeNamesStraightPath( childInstance, instanceNamesOnDestPath );
+		List<Instance> instancesToDuplicate = new ArrayList<Instance>();
+		instancesToDuplicate.add( childInstance );
+		instancesToDuplicate.add( grandChildInstance );
+		Instance rootOfBranch = InstanceHelpers.duplicateInstanceChangeNamesStraightPath( instancesToDuplicate, instanceNamesOnDestPath );
 		rootOfBranch.setParent(childInstance.getParent());
 		Manager.INSTANCE.addInstance( ma, childInstance.getParent(), rootOfBranch );
-	
+		
+		Assert.assertNotNull(rootOfBranch);
 		Assert.assertEquals( "tomcat1", rootOfBranch.getName());
 		Assert.assertEquals( "vm1", rootOfBranch.getParent().getName());
-		Instance seekInstance = InstanceHelpers.findInstanceByPath(ma.getApplication(), "/vm1/tomcat");
-		Assert.assertEquals( "tomcat", seekInstance.getName() );
+		Instance seekInstance = InstanceHelpers.findInstanceByPath(ma.getApplication(), "/vm1/tomcat1/rubis");
+		Assert.assertEquals( "rubis", seekInstance.getName() );
 	}
 
 

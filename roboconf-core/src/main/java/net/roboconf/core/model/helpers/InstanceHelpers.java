@@ -465,7 +465,7 @@ public final class InstanceHelpers {
 	
 	
 	/**
-	 * Duplicates an instance and its children and change their names. //Linh Manh Pham
+	 * Duplicates an instance and its children and change their names (which is + 'namePatch'). //Linh Manh Pham
 	 * <p>
 	 * The result does not have any parent. It does not have any
 	 * data, nor imports or real exports. The names are changed. In fact, only 
@@ -476,11 +476,10 @@ public final class InstanceHelpers {
 	 * @param instance a non-null instance to duplicate
 	 * @return a non-null instance
 	 */
-	public static Instance duplicateInstanceChangeNames( Instance instance ) {
+	public static Instance duplicateInstanceChangeNames( Instance instance, String namePatch ) {
 
 		Map<Instance,Instance> instanceToDuplicate = new HashMap<Instance,Instance> ();
 		List<Instance> toProcess = new ArrayList<Instance> ();
-		String namePatch = "_migrated";
 		toProcess.add( instance );
 
 		while( ! toProcess.isEmpty()) {
@@ -498,35 +497,6 @@ public final class InstanceHelpers {
 				insertChild( parent, copy );
 
 			toProcess.addAll( current.getChildren());
-		}
-
-		return instanceToDuplicate.get( instance );
-	}
-	
-	
-	public static Instance duplicateInstanceChangeNamesStraightPath( Instance instance, List<String> namesToChange ) {
-
-		Map<Instance,Instance> instanceToDuplicate = new HashMap<Instance,Instance> ();
-		List<Instance> toProcess = new ArrayList<Instance> ();
-		toProcess.add( instance );
-		System.out.println( "namesToChange size: " + namesToChange.size() );
-		while( ! toProcess.isEmpty()) {
-			Instance current = toProcess.remove( 0 );
-
-			Instance copy = new Instance();
-			copy.name( namesToChange.get(0).toString() );
-			System.out.println( "Name To change: " + namesToChange.get(0).toString() );
-			copy.component( current.getComponent());
-			copy.channel( current.getChannel());
-			copy.getOverriddenExports().putAll( current.getOverriddenExports());
-			instanceToDuplicate.put( current, copy );
-
-			Instance parent = instanceToDuplicate.get( current.getParent());
-			if( parent != null )
-				insertChild( parent, copy );
-
-			toProcess.addAll( current.getChildren());
-			namesToChange.remove(0);
 		}
 
 		return instanceToDuplicate.get( instance );
@@ -534,7 +504,7 @@ public final class InstanceHelpers {
 	
 	
 	/**
-	 * Duplicates all instances appearing in an instancePath of an instance. //Linh Manh Pham
+	 * Duplicates all instances appearing in a list of instance, change names to strings in the 'namesToChange' //Linh Manh Pham
 	 * <p>
 	 * The result does not have any parent. It does not have any
 	 * data, nor imports or real exports. The names are changed. In fact, only 
@@ -543,9 +513,65 @@ public final class InstanceHelpers {
 	 * </p>
 	 *
 	 * @param instance a non-null instance to duplicate
-	 * @return a non-null instance
+	 * @return a non-null instance (this is the first instance in the 'instances' list
 	 */
-	public static Instance duplicateAllInstancesOnTheInstancePathOf( Instance instance ) {
+	public static Instance duplicateInstanceChangeNamesStraightPath( List<Instance> instances, List<String> namesToChange ) {
+
+		Map<Instance,Instance> instanceToDuplicate = new HashMap<Instance,Instance> ();
+		List<Instance> toProcess = new ArrayList<Instance> ();
+		Instance returnInstance = instances.get(0);
+		toProcess.add( returnInstance );
+		List<String> instancePaths = new ArrayList<String> ();
+		for ( Instance instance : instances ) instancePaths.add(InstanceHelpers.computeInstancePath(instance));
+		instancePaths.remove(0);
+		
+		System.out.println( "namesToChange size: " + namesToChange.size() );
+		
+		while( ! toProcess.isEmpty()) {
+			Instance current = toProcess.remove(0);
+			Instance copy = new Instance();
+			
+			instanceToDuplicate.put(current, copy);
+
+			Instance parent = instanceToDuplicate.get( current.getParent() );
+			
+			if( parent != null ) {
+				for( String instancePath : instancePaths ) {
+			        if ( instancePath.equals( InstanceHelpers.computeInstancePath(current)) ) {
+			        	System.out.println( "Name To change: " + namesToChange.get(0).toString() );
+			        	copy.name( namesToChange.remove(0).toString() );
+			        	copy.component( current.getComponent() );
+						copy.channel( current.getChannel() );
+						copy.getOverriddenExports().putAll( current.getOverriddenExports() );
+			        	insertChild( parent, copy );
+			        }
+			    }
+			} else {
+				System.out.println( "This is first instance. Name To change: " + namesToChange.get(0).toString() );
+				copy.name( namesToChange.remove(0).toString() );
+				copy.component( current.getComponent() );
+			}
+
+			toProcess.addAll( current.getChildren() );
+		}
+
+		return instanceToDuplicate.get(returnInstance);
+	}
+	
+	
+	/**
+	 * Duplicates all instances appearing in an instancePath of an instance and change their names (which is + 'namePatch'). //Linh Manh Pham
+	 * <p>
+	 * The result does not have any parent. It does not have any
+	 * data, nor imports or real exports. The names are changed. In fact, only 
+	 * the component association, the channel and the overridden exports
+	 * are copied. The children are not "copied" but duplicated.
+	 * </p>
+	 *
+	 * @param instance a non-null instance to duplicate
+	 * @return a non-null instance (this is the rootInstance of the 'instance')
+	 */
+	public static Instance duplicateAllInstancesOnTheInstancePathOf( Instance instance, String namePatch ) {
 		
 		List<String> splittedInstancePath = Utils.splitNicely(InstanceHelpers.computeInstancePath(instance), "/");
 		splittedInstancePath.remove(0);
@@ -553,23 +579,23 @@ public final class InstanceHelpers {
 		Instance rootInstance = InstanceHelpers.findRootInstance(instance);
 		Map<Instance,Instance> instanceToDuplicate = new HashMap<Instance,Instance> ();
 		List<Instance> toProcess = new ArrayList<Instance> ();
-		String namePatch = "_migrated";
 		toProcess.add( rootInstance );
 
 		while( ! toProcess.isEmpty()) {
 			Instance current = toProcess.remove( 0 );
 
 			Instance copy = new Instance();
-			copy.name( current.getName() + namePatch );
-			copy.component( current.getComponent());
-			copy.channel( current.getChannel());
-			copy.getOverriddenExports().putAll( current.getOverriddenExports());
+			
 			instanceToDuplicate.put( current, copy );
 
 			Instance parent = instanceToDuplicate.get( current.getParent());
 			if( parent != null ) {
 				for( String instanceName : splittedInstancePath ) {
 			        if ( instanceName.equals(current.getName()) ) {
+			        	copy.name( current.getName() + namePatch );
+						copy.component( current.getComponent());
+						copy.channel( current.getChannel());
+						copy.getOverriddenExports().putAll( current.getOverriddenExports());
 			        	insertChild( parent, copy );
 			        }
 			    }

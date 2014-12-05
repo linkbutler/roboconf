@@ -422,7 +422,7 @@ public class InstanceHelpersTest {
 		Assert.assertEquals( copy, lastChild.getParent());
 		
 		// Perform a copy of all instances on the instancePath of an instance, return a copied root instance
-		copy = InstanceHelpers.duplicateAllInstancesOnTheInstancePathOf( original_3 );
+		copy = InstanceHelpers.duplicateAllInstancesOnTheInstancePathOf( original_3, "_migrated" );
 		Assert.assertEquals( 1, copy.getChildren().size());
 	}
 }
