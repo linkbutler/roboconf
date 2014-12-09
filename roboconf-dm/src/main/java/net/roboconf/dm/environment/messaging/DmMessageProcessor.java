@@ -27,6 +27,7 @@ import net.roboconf.core.model.runtime.Instance.InstanceStatus;
 import net.roboconf.dm.management.ManagedApplication;
 import net.roboconf.dm.management.Manager;
 import net.roboconf.dm.management.exceptions.ImpossibleInsertionException;
+import net.roboconf.dm.management.exceptions.UnauthorizedActionException;
 import net.roboconf.iaas.api.IaasException;
 import net.roboconf.messaging.client.AbstractMessageProcessor;
 import net.roboconf.messaging.messages.Message;
@@ -306,25 +307,33 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 					Instance rootInstance = InstanceHelpers.findRootInstance(oldInstance);
 					Manager.INSTANCE.stopAllThoroughly(ma, rootInstance);
 					Manager.INSTANCE.undeployAllThoroughly(ma, rootInstance);
-					//Thread.sleep(30 * 1000);
-					//Manager.INSTANCE.removeInstance(ma, rootInstance);
+					Thread.sleep(30 * 1000);
+					Manager.INSTANCE.removeInstance(ma, rootInstance);
 					this.logger.info( "All instances of the path " + oldInstancePath + " were removed from the model." );
 				} catch (IaasException e) {
 					this.logger.warning( "IaasException. Undeploy instance failed!" );
 				} catch (IOException e) {
 					this.logger.warning( "IOException. Undeploy instance failed!" );
+				} catch (UnauthorizedActionException e) {
+					this.logger.warning( "UnauthorizedActionException. Remove instance failed!" );
+				} catch (InterruptedException e) {
+					this.logger.warning( "InterruptedException. Sleep failed!" );
 				}
 			} else if ( "0".equals(deleteOldRoot) ) {	// only delete the oldInstance
 				try {
 					Manager.INSTANCE.stopAllThoroughly(ma, oldInstance);
 					Manager.INSTANCE.undeployAllThoroughly(ma, oldInstance);
-					//Thread.sleep(30 * 1000);
-					//Manager.INSTANCE.removeInstance(ma, oldInstance);
+					Thread.sleep(30 * 1000);
+					Manager.INSTANCE.removeInstance(ma, oldInstance);
 					this.logger.info( "Instance " + oldInstance.getName() + " was removed from the model." );
 				} catch (IOException e) {
 					this.logger.warning( "IOException. Undeploy instance failed!" );
 				} catch (IaasException e) {
 					this.logger.warning( "IOException. Stop instance failed!" );
+				} catch (UnauthorizedActionException e) {
+					this.logger.warning( "UnauthorizedActionException. Remove instance failed!" );
+				} catch (InterruptedException e) {
+					this.logger.warning( "InterruptedException. Sleep failed!" );
 				}
 			} else {
 				this.logger.info( "We keep all instances in the " + oldInstancePath + ". Nothing was removed from the model." );

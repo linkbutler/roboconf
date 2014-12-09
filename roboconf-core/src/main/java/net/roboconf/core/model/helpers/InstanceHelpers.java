@@ -251,6 +251,42 @@ public final class InstanceHelpers {
 
 		return result;
 	}
+	
+	
+	/**
+	 * Finds child instances by component name beginning from a root instance.
+	 * @param instance a root instance (not null)
+	 * @param componentName a component name (not null)
+	 * @return a non-null list of instances
+	 */
+	public static List<Instance> findChildInstancesByComponentName( Instance instance, String componentName ) {
+
+		List<Instance> result = new ArrayList<Instance> ();
+		for( Instance inst : instance.getChildren() ) {
+			if( componentName.equals( inst.getComponent().getName()))
+				result.add( inst );
+		}
+
+		return result;
+	}
+	
+	
+	/**
+	 * Finds child instances by component name beginning from an application.
+	 * @param application an application (not null)
+	 * @param componentName a component name (not null)
+	 * @return a non-null list of instances
+	 */
+	public static List<Instance> findChildInstancesByComponentName( Application application, String componentName ) {
+
+		List<Instance> result = new ArrayList<Instance> ();
+		for( Instance inst : application.getRootInstances() ) {
+			if( componentName.equals( inst.getComponent().getName()))
+				result.add( inst );
+		}
+
+		return result;
+	}
 
 
 	/**
@@ -300,11 +336,10 @@ public final class InstanceHelpers {
 	 */
 	public static List<Instance> getAllInstancesInTheInstancePath( Application application, String instancePath ) {
 		
-		List<String> splittedInstancePath = Utils.splitNicely(instancePath, "/");
-		splittedInstancePath.remove(0);
+		List<String> splittedInstancePath = getAllInstancePathsOfInstancesInTheString(instancePath);
 		List<Instance> returnInstances = new ArrayList<Instance> (); 
 		for (String i : splittedInstancePath ) {
-			Instance currentInstance = InstanceHelpers.findInstanceByName(application, i);
+			Instance currentInstance = findInstanceByPath(application, i);
 			returnInstances.add(currentInstance);
 		}
 		
@@ -362,13 +397,11 @@ public final class InstanceHelpers {
 		boolean hasAlreadyAChildWithThisName = false;
 		for( Instance inst : list ) {
 			if(( hasAlreadyAChildWithThisName = childInstance.getName().equals( inst.getName())))
-				System.out.println( "hasAlreadyAChildWithThisName" );
 				break;
 		}
 
 		// We insert a "root instance"
 		if( parentInstance == null ) {
-			System.out.println( "parentInstance=null" );
 			if( ! hasAlreadyAChildWithThisName
 					&& childInstance.getComponent().getAncestors().isEmpty()) {
 
@@ -380,20 +413,16 @@ public final class InstanceHelpers {
 
 		// We insert a child instance
 		else {
-			System.out.println( "parentInstance!=null" );
 			if( ! hasAlreadyAChildWithThisName
 					&& parentInstance.getComponent().getChildren().contains( childInstance.getComponent())) {
 				
 				InstanceHelpers.insertChild( parentInstance, childInstance );
-				System.out.println( "Insertchild success!" );
 				Collection<RoboconfError> errors = RuntimeModelValidator.validate( application.getRootInstances());
 				if( RoboconfErrorHelpers.containsCriticalErrors( errors )) {
 					childInstance.setParent( null );
 					parentInstance.getChildren().remove( childInstance );
-					System.out.println( "not validation" );
 
 				} else {
-					System.out.println( "Validated!" );
 					success = true;
 				}
 			}
@@ -525,8 +554,6 @@ public final class InstanceHelpers {
 		for ( Instance instance : instances ) instancePaths.add(InstanceHelpers.computeInstancePath(instance));
 		instancePaths.remove(0);
 		
-		System.out.println( "namesToChange size: " + namesToChange.size() );
-		
 		while( ! toProcess.isEmpty()) {
 			Instance current = toProcess.remove(0);
 			Instance copy = new Instance();
@@ -538,7 +565,6 @@ public final class InstanceHelpers {
 			if( parent != null ) {
 				for( String instancePath : instancePaths ) {
 			        if ( instancePath.equals( InstanceHelpers.computeInstancePath(current)) ) {
-			        	System.out.println( "Name To change: " + namesToChange.get(0).toString() );
 			        	copy.name( namesToChange.remove(0).toString() );
 			        	copy.component( current.getComponent() );
 						copy.channel( current.getChannel() );
@@ -547,7 +573,6 @@ public final class InstanceHelpers {
 			        }
 			    }
 			} else {
-				System.out.println( "This is first instance. Name To change: " + namesToChange.get(0).toString() );
 				copy.name( namesToChange.remove(0).toString() );
 				copy.component( current.getComponent() );
 			}

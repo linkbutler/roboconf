@@ -376,7 +376,7 @@ public final class Manager {
 		if( ! InstanceHelpers.tryToInsertChildInstance( ma.getApplication(), parentInstance, instance ))
 			throw new ImpossibleInsertionException( instance.getName());
 
-		this.logger.fine( "Instance " + InstanceHelpers.computeInstancePath( instance ) + " was successfully added in " + ma.getName() + "." );
+		this.logger.info( "Instance " + InstanceHelpers.computeInstancePath( instance ) + " was successfully added in " + ma.getName() + "." );
 
 		// Store the message because we want to make sure the message is not lost
 		ma.storeAwaitingMessage( instance, new MsgCmdInstanceAdd( parentInstance, instance ));

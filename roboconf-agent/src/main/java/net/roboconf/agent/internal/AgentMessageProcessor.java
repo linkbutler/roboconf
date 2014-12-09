@@ -363,7 +363,14 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 			else {
 				this.logger.info( "Instance " + newInstance.getName() + " was successfully under " + parentInstancePath + "." );
 				InstanceHelpers.insertChild( parentInstance, newInstance );
-				instancesToProcess.add( newInstance );
+				this.logger.info( "Number of children of the newInstance is &&& " + newInstance.getChildren().size()+ ".");
+				List<Instance> hList = InstanceHelpers.buildHierarchicalList( this.rootInstance );
+				for (Instance i : hList) {
+					this.logger.info( "Intance " + i + " of the newInstance is &&& " + i.getName() + " and instancePath=" + InstanceHelpers.computeInstancePath(i) + ".");	
+				}
+				this.logger.info( "Instance found by Path of the newInstance is &&& " + InstanceHelpers.findInstanceByPath( this.rootInstance, parentInstancePath+"/"+newInstance.getName() ).getName() + ".");
+				instancesToProcess.addAll( InstanceHelpers.buildHierarchicalList( newInstance ));
+				//instancesToProcess.add( newInstance );
 				result = true;
 			}
 		}
