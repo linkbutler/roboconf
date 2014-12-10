@@ -216,35 +216,40 @@ public class ApplicationWs implements IApplicationWs {
 						componentNameToInstanceDestPath.put( componentName, cumulativePath );
 						boolean immediateQuit = false;
 						
-						for ( Instance j : allInstancesofCurrentComponent ) {
-							this.logger.info( "Instance to compare in InstancePath=" + componentNameToInstanceDestPath.get(componentName) + " and current comparing instance=" + InstanceHelpers.computeInstancePath(j) + " and componentName=" + componentName + "." );
-							if ( componentNameToInstanceDestPath.get(componentName).equals(InstanceHelpers.computeInstancePath(j)) ) {								
-								this.logger.info( "Instance " + InstanceHelpers.computeInstancePath(j) + " is reused for instance " + instancePath + " in application=" + ma.getName() + "." );
-								if ( n == instancesOnInstancePath.size() - 1 ) {	// insPath coincidence destPath
-									if ( i.getStatus() == InstanceStatus.DEPLOYED_STOPPED ) {	
-										Manager.INSTANCE.restore( ma, i, instancePath, "-1" );	// restore only i and force deleteOldRoot to '-1'
-										Manager.INSTANCE.start( ma, i );
-										responseInCase = Response.ok().build();
-									//} else if ( i.getStatus() == InstanceStatus.DEPLOYED_STARTED ) {	// it's better do not overwrite a running instance, but sometime we can try
-										//Manager.INSTANCE.stop( ma, i );		//  need to stop the instance first
-										//Manager.INSTANCE.restore( ma, i, instancePath, "-1" );	// restore only i and force deleteOldRoot to '-1'
-										//Manager.INSTANCE.start( ma, i );
-										//responseInCase = Response.ok().build();
-									} else if ( i.getStatus() == InstanceStatus.NOT_DEPLOYED ) {
-										Manager.INSTANCE.deploy(ma, i );		//  need to deploy the instance first
-										Manager.INSTANCE.restore( ma, i, instancePath, "-1" );	// restore only i and force deleteOldRoot to '-1'
-										Manager.INSTANCE.start( ma, i );
-										responseInCase = Response.ok().build();
+						if ( allInstancesofCurrentComponent.size() != 0 ) {
+							for ( Instance j : allInstancesofCurrentComponent ) {
+								this.logger.info( "Instance to compare in InstancePath=" + componentNameToInstanceDestPath.get(componentName) + " and current comparing instance=" + InstanceHelpers.computeInstancePath(j) + " and componentName=" + componentName + "." );
+								if ( componentNameToInstanceDestPath.get(componentName).equals(InstanceHelpers.computeInstancePath(j)) ) {								
+									this.logger.info( "Instance " + InstanceHelpers.computeInstancePath(j) + " is reused for instance " + instancePath + " in application=" + ma.getName() + "." );
+									if ( n == instancesOnInstancePath.size() - 1 ) {	// insPath coincidence destPath
+										if ( i.getStatus() == InstanceStatus.DEPLOYED_STOPPED ) {	
+											Manager.INSTANCE.restore( ma, i, instancePath, "-1" );	// restore only i and force deleteOldRoot to '-1'
+											Manager.INSTANCE.start( ma, i );
+											responseInCase = Response.ok().build();
+										//} else if ( i.getStatus() == InstanceStatus.DEPLOYED_STARTED ) {	// it's better do not overwrite a running instance, but sometime we can try
+											//Manager.INSTANCE.stop( ma, i );		//  need to stop the instance first
+											//Manager.INSTANCE.restore( ma, i, instancePath, "-1" );	// restore only i and force deleteOldRoot to '-1'
+											//Manager.INSTANCE.start( ma, i );
+											//responseInCase = Response.ok().build();
+										} else if ( i.getStatus() == InstanceStatus.NOT_DEPLOYED ) {
+											Manager.INSTANCE.deploy(ma, i );		//  need to deploy the instance first
+											Manager.INSTANCE.restore( ma, i, instancePath, "-1" );	// restore only i and force deleteOldRoot to '-1'
+											Manager.INSTANCE.start( ma, i );
+											responseInCase = Response.ok().build();
+										}
+										else responseInCase = Response.status( Status.BAD_REQUEST ).entity( "Instance " + i.getName() + " must not be in 'STARTED' and 'PROBLEM' state in this case." ).build();
 									}
-									else responseInCase = Response.status( Status.BAD_REQUEST ).entity( "Instance " + i.getName() + " must not be in 'STARTED' and 'PROBLEM' state in this case." ).build();
+									instancePointOfSeparation = j;
+									immediateQuit = false;
+									break;
+								} else {
+									this.logger.info( "Instance " + instancePath + " in " + ma.getName() + " will be put on a new instancePath=" + cumulativePath + "." );
+									immediateQuit = true;
 								}
-								instancePointOfSeparation = j;
-								immediateQuit = false;
-								break;
-							} else {
-								this.logger.info( "Instance " + instancePath + " in " + ma.getName() + " will be put on a new instancePath=" + cumulativePath + "." );
-								immediateQuit = true;
 							}
+						} else {
+							this.logger.info( "Instance " + instancePath + " in " + ma.getName() + " will be put on a new instancePath=" + cumulativePath + "." );
+							immediateQuit = true;
 						}
 						
 						if (immediateQuit) {

@@ -172,6 +172,7 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 
 		String instancePath = message.getInstancePath();
 		Application app = Manager.INSTANCE.findApplicationByName( message.getApplicationName());
+		ManagedApplication ma = Manager.INSTANCE.getAppNameToManagedApplication().get( message.getApplicationName() );
 		Instance instance = InstanceHelpers.findInstanceByPath( app, instancePath );
 
 		// If 'app' is null, then 'instance' is also null.
@@ -198,6 +199,17 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 			sb.append( instancePath );
 			sb.append( ". Imports were updated too." );
 			this.logger.fine( sb.toString());
+			
+			if ( message.getNewStatus() == InstanceStatus.NOT_DEPLOYED || message.getNewStatus() == InstanceStatus.UNDEPLOYING || instance.getStatus() == InstanceStatus.NOT_DEPLOYED || instance.getStatus() == InstanceStatus.UNDEPLOYING ) {
+				try {
+					Manager.INSTANCE.removeInstance(ma, instance);
+					this.logger.info( instancePath + " has been removed from the model." );
+				} catch (UnauthorizedActionException e) {
+					this.logger.severe( "UnauthorizedActionException. Cannot remove the instance " + instance.getName() + "." );
+				} catch (IOException e) {
+					this.logger.severe( "IOException. Cannot remove the instance " + instance.getName() + "." );
+				}
+			}
 		}
 	}
 
@@ -323,18 +335,18 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 				try {
 					Manager.INSTANCE.stopAllThoroughly(ma, oldInstance);
 					Manager.INSTANCE.undeployAllThoroughly(ma, oldInstance);
-					Thread.sleep(30 * 1000);
-					Manager.INSTANCE.removeInstance(ma, oldInstance);
+					//Thread.sleep(30 * 1000);
+					//Manager.INSTANCE.removeInstance(ma, oldInstance);
 					this.logger.info( "Instance " + oldInstance.getName() + " was removed from the model." );
 				} catch (IOException e) {
 					this.logger.warning( "IOException. Undeploy instance failed!" );
 				} catch (IaasException e) {
 					this.logger.warning( "IOException. Stop instance failed!" );
-				} catch (UnauthorizedActionException e) {
+				}/** catch (UnauthorizedActionException e) {
 					this.logger.warning( "UnauthorizedActionException. Remove instance failed!" );
 				} catch (InterruptedException e) {
 					this.logger.warning( "InterruptedException. Sleep failed!" );
-				}
+				}**/
 			} else {
 				this.logger.info( "We keep all instances in the " + oldInstancePath + ". Nothing was removed from the model." );
 			}
