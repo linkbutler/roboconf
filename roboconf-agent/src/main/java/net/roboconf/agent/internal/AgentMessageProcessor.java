@@ -277,6 +277,7 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 		boolean result = false;
 
 		String instancePath = msg.getInstancePath();
+		String destPath = msg.getDestPath();
 		String deleteOldRoot = msg.getDeleteOldRoot();
 		Instance instance = InstanceHelpers.findInstanceByPath( this.rootInstance, msg.getInstancePath());
 		PluginInterface plugin;
@@ -307,7 +308,7 @@ public class AgentMessageProcessor extends AbstractMessageProcessor {
 
 			try {
 				plugin.backup( instance );
-				this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceBackedup( this.appName, instance, deleteOldRoot ));
+				this.messagingClient.sendMessageToTheDm( new MsgNotifInstanceBackedup( this.appName, instance, destPath, deleteOldRoot ));
 				this.logger.fine( "Instance " + msg.getInstancePath() + " was backed up. A notification sent back to the DM." );
 				result = true;
 

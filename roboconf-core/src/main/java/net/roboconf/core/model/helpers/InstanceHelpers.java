@@ -404,7 +404,6 @@ public final class InstanceHelpers {
 		if( parentInstance == null ) {
 			if( ! hasAlreadyAChildWithThisName
 					&& childInstance.getComponent().getAncestors().isEmpty()) {
-
 				application.getRootInstances().add( childInstance );
 				success = true;
 				// No validation here, but maybe we should...
@@ -415,9 +414,8 @@ public final class InstanceHelpers {
 		else {
 			if( ! hasAlreadyAChildWithThisName
 					&& parentInstance.getComponent().getChildren().contains( childInstance.getComponent())) {
-				
 				InstanceHelpers.insertChild( parentInstance, childInstance );
-				Collection<RoboconfError> errors = RuntimeModelValidator.validate( application.getRootInstances());
+				Collection<RoboconfError> errors = RuntimeModelValidator.validate( application.getRootInstances());				
 				if( RoboconfErrorHelpers.containsCriticalErrors( errors )) {
 					childInstance.setParent( null );
 					parentInstance.getChildren().remove( childInstance );
@@ -614,7 +612,7 @@ public final class InstanceHelpers {
 			instanceToDuplicate.put( current, copy );
 
 			Instance parent = instanceToDuplicate.get( current.getParent());
-			if( parent != null ) {
+			if( parent != null ) {	// for copy non-root instance
 				for( String instanceName : splittedInstancePath ) {
 			        if ( instanceName.equals(current.getName()) ) {
 			        	copy.name( current.getName() + namePatch );
@@ -624,6 +622,11 @@ public final class InstanceHelpers {
 			        	insertChild( parent, copy );
 			        }
 			    }
+			} else {	// for copy root instance
+				copy.name( current.getName() + namePatch );
+				copy.component( current.getComponent());
+				copy.channel( current.getChannel());
+				copy.getOverriddenExports().putAll( current.getOverriddenExports());
 			}
 			toProcess.addAll( current.getChildren());
 		}

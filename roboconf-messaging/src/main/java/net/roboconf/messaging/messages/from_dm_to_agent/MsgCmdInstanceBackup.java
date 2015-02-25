@@ -27,6 +27,8 @@ public class MsgCmdInstanceBackup extends Message {
 
 	private static final long serialVersionUID = -1692734177288046527L;
 	private final String instancePath;
+	private final String destPath;
+	private final String deleteOldRoot;
 
 
 	/**
@@ -36,6 +38,8 @@ public class MsgCmdInstanceBackup extends Message {
 	public MsgCmdInstanceBackup( String instancePath ) {
 		super();
 		this.instancePath = instancePath;
+		this.destPath = null;
+		this.deleteOldRoot = null;
 	}
 
 	/**
@@ -45,11 +49,36 @@ public class MsgCmdInstanceBackup extends Message {
 	public MsgCmdInstanceBackup( Instance instance ) {
 		this( InstanceHelpers.computeInstancePath( instance ));
 	}
+	
+	/**
+	 * Constructor.
+	 * @param instancePath
+	 */
+	public MsgCmdInstanceBackup( String instancePath, String deleteOldRoot, String destPath ) {
+		super();
+		this.instancePath = instancePath;
+		this.destPath = deleteOldRoot;
+		this.deleteOldRoot = destPath;
+	}
 
 	/**
 	 * @return the instancePath
 	 */
 	public String getInstancePath() {
 		return this.instancePath;
+	}
+	
+	/**
+	 * @return the destPath
+	 */
+	public String getDestPath() {
+		return this.destPath;
+	}
+	
+	/**
+	 * @return the deleteOldRoot
+	 */
+	public String getDeletOldRoot() {
+		return this.deleteOldRoot;
 	}
 }

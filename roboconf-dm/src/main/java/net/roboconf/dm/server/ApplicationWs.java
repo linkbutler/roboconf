@@ -126,24 +126,107 @@ public class ApplicationWs implements IApplicationWs {
 	
 	
 	@Override
-	public Response migrate( String applicationName, String instancePath, String deleteOldRoot ) {
+	public Response migrate( String applicationName, String instancePath, String destPath, String deleteOldRoot ) {
 
-		this.logger.fine( "Request: perform action 'migrate' in " + applicationName + ", instance " + instancePath + " , delete old root: " + deleteOldRoot + "." );
+		this.logger.fine( "Request: perform action 'migrate' in " + applicationName + ", instance " + instancePath + ", destination path " + destPath + " , delete old root: " + deleteOldRoot + "." );
 		Response response;
 		try {
 			ManagedApplication ma;
 			Instance instance;
-
+			
 			if(( ma = Manager.INSTANCE.getAppNameToManagedApplication().get( applicationName )) == null )
 				response = Response.status( Status.NOT_FOUND ).entity( "Application " + applicationName + " does not exist." ).build();
 
 			else if(( instance = InstanceHelpers.findInstanceByPath( ma.getApplication(), instancePath )) == null )
 				response = Response.status( Status.NOT_FOUND ).entity( "Instance " + instancePath + " was not found." ).build();
+			
+			else if( destPath == null || "".equals(destPath) )
+				response = Response.status( Status.NOT_FOUND ).entity( "Missing 'destPath' or destination path empty." ).build();
 
 			else if( "-1".equals(deleteOldRoot) || "1".equals(deleteOldRoot) || "0".equals(deleteOldRoot) ) {   
-				Manager.INSTANCE.migrate( ma, instance, deleteOldRoot );
-				response = Response.ok().build();
+				List<Instance> instancesInPath = InstanceHelpers.getAllInstancesInTheInstancePath(ma.getApplication(), instancePath);
+				String componentsInPath = "";
+				String stringTemplateToCompare = "";
+
+				for (Instance i : instancesInPath ) {
+					String componentName = i.getComponent().getName();
+					componentsInPath = componentsInPath + "/instance_of_" + componentName;
+					stringTemplateToCompare = stringTemplateToCompare + "[/]{1}[^/]*";
+				}
 				
+				if ( !destPath.matches(stringTemplateToCompare) ) {
+					response = Response.status( Status.BAD_REQUEST ).entity( "The 'destPath' must follow template: " + componentsInPath ).build();
+				} else {
+					// Calculate where to put restored instance based on the destPath, recreate all instances on the path to the new one
+					List<String> instanceNamesOnDestPath = Utils.splitNicely(destPath, "/");
+					instanceNamesOnDestPath.remove(0);
+					Map<String,String> componentNameToInstanceDestPath = new HashMap<String,String> ();
+					String cumulativePath = "";
+					
+					List<Instance> instancesOnInstancePath = InstanceHelpers.getAllInstancesInTheInstancePath(ma.getApplication(), instancePath);
+					int n = 0;
+					Instance rootOfBranch = null;
+					Response responseInCase = null;
+					Instance instancePointOfSeparation = null;
+					
+					for ( Instance i : instancesOnInstancePath ) {
+						String componentName = i.getComponent().getName();
+						List<Instance> allInstancesofCurrentComponent = new ArrayList<Instance>();
+						if (instancePointOfSeparation == null) allInstancesofCurrentComponent = InstanceHelpers.findChildInstancesByComponentName(ma.getApplication(), componentName );
+						else allInstancesofCurrentComponent = InstanceHelpers.findChildInstancesByComponentName(instancePointOfSeparation, componentName );
+						cumulativePath = cumulativePath + "/" + instanceNamesOnDestPath.get(0).toString();
+						componentNameToInstanceDestPath.put( componentName, cumulativePath );
+						boolean immediateQuit = false;
+						
+						if ( allInstancesofCurrentComponent.size() != 0 ) {
+							for ( Instance j : allInstancesofCurrentComponent ) {
+								this.logger.info( "Instance to compare in InstancePath=" + componentNameToInstanceDestPath.get(componentName) + " and current comparing instance=" + InstanceHelpers.computeInstancePath(j) + " and componentName=" + componentName + "." );
+								if ( componentNameToInstanceDestPath.get(componentName).equals(InstanceHelpers.computeInstancePath(j)) ) {								
+									this.logger.info( "Instance " + InstanceHelpers.computeInstancePath(j) + " is reused for instance " + instancePath + " in application=" + ma.getName() + "." );
+									if ( n == instancesOnInstancePath.size() - 1 ) {	// insPath coincidence destPath
+										if ( i.getStatus() == InstanceStatus.DEPLOYED_STOPPED ) {	
+											Manager.INSTANCE.start( ma, i );
+											responseInCase = Response.ok().build();
+										} else if ( i.getStatus() == InstanceStatus.NOT_DEPLOYED ) {
+											Manager.INSTANCE.deploy(ma, i );		//  need to deploy the instance first
+											Manager.INSTANCE.start( ma, i );
+											responseInCase = Response.ok().build();
+										}
+										else responseInCase = Response.status( Status.BAD_REQUEST ).entity( "Instance " + i.getName() + " must not be in 'STARTED' and 'PROBLEM' state in this case." ).build();
+									}
+									instancePointOfSeparation = j;
+									immediateQuit = false;
+									break;
+								} else {
+									this.logger.info( "Instance " + instancePath + " in " + ma.getName() + " will be put on a new instancePath=" + cumulativePath + "." );
+									immediateQuit = true;
+								}
+							}
+						} else {
+							this.logger.info( "Instance " + instancePath + " in " + ma.getName() + " will be put on a new instancePath=" + cumulativePath + "." );
+							immediateQuit = true;
+						}
+						
+						if (immediateQuit) {
+							List<Instance> instancesToDuplicate = new ArrayList<Instance>();
+							for(int runner=n; runner<instancesOnInstancePath.size(); runner++) instancesToDuplicate.add( instancesOnInstancePath.get(runner) );
+							rootOfBranch = InstanceHelpers.duplicateInstanceChangeNamesStraightPath( instancesToDuplicate, instanceNamesOnDestPath );
+							if( n == 0 ) {
+								Manager.INSTANCE.addInstance( ma, null, rootOfBranch );	// n==0 means 'i' is a rootInstance, otherwise it's not
+							}
+							else {
+								Manager.INSTANCE.addInstance( ma, instancePointOfSeparation, rootOfBranch );
+							}
+							Manager.INSTANCE.deployAll( ma, rootOfBranch );
+							Manager.INSTANCE.startAll( ma, rootOfBranch );
+							responseInCase = Response.ok().build();
+							break;
+						}
+						instanceNamesOnDestPath.remove(0);
+						n++;
+					}	
+					response = responseInCase;
+				}
 			} else {
 				response = Response.status( Status.BAD_REQUEST ).entity( "Invalid parameter delete-old-root: " + deleteOldRoot + " . It should only be '-1', '0' or '1'." ).build();
 			}

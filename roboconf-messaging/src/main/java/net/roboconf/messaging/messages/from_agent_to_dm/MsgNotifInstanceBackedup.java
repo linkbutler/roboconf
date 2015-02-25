@@ -27,6 +27,7 @@ public class MsgNotifInstanceBackedup extends Message {
 
 	private static final long serialVersionUID = -7071403536196140938L;
 	private final String instancePath;
+	private final String destPath;
 	private final String applicationName;
 	private final String deleteOldRoot;
 
@@ -42,19 +43,36 @@ public class MsgNotifInstanceBackedup extends Message {
 		this.instancePath = InstanceHelpers.computeInstancePath( instance );
 		this.applicationName = applicationName;
 		this.deleteOldRoot = null;
+		this.destPath = null;
 	}
 	
 	/**
 	 * Constructor.
 	 * @param applicationName
 	 * @param componentInstance
-	 * @param deleteOldRoot - only use for migration process
+	 * @param deleteOldRoot
 	 */
 	public MsgNotifInstanceBackedup( String applicationName, Instance instance, String deleteOldRoot ) {
 		super();
 		this.instancePath = InstanceHelpers.computeInstancePath( instance );
 		this.applicationName = applicationName;
 		this.deleteOldRoot = deleteOldRoot;
+		this.destPath = null;
+	}
+	
+	/**
+	 * Constructor.
+	 * @param applicationName
+	 * @param componentInstance
+	 * @param deleteOldRoot
+	 * @param destPath - only use for replicate and migration
+	 */
+	public MsgNotifInstanceBackedup( String applicationName, Instance instance, String destPath, String deleteOldRoot ) {
+		super();
+		this.instancePath = InstanceHelpers.computeInstancePath( instance );
+		this.applicationName = applicationName;
+		this.deleteOldRoot = deleteOldRoot;
+		this.destPath = destPath;
 	}
 
 	/**
@@ -76,5 +94,12 @@ public class MsgNotifInstanceBackedup extends Message {
 	 */
 	public String getDeleteOldRoot() {
 		return this.deleteOldRoot;
+	}
+	
+	/**
+	 * @return the destPath
+	 */
+	public String getDestPath() {
+		return this.destPath;
 	}
 }

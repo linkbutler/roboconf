@@ -522,17 +522,18 @@ public final class Manager {
 	 * Migrate an instance. //Linh Manh Pham
 	 * @param ma the managed application
 	 * @param instance the instance to be backed up (not null)
+	 * @param destPath where to put the migrated/replicated instance
 	 * @param deleteOldRoot if '1', delete the old root, if '0', only delete the backed up instance, if '-1' don't delete anything, otherwise fail
 	 * @throws IOException if an error occurred with the messaging
 	 */
-	public void migrate( ManagedApplication ma, Instance instance, String deleteOldRoot ) throws IOException {
+	public void migrate( ManagedApplication ma, Instance instance, String destPath, String deleteOldRoot ) throws IOException {
 
 		String instancePath = InstanceHelpers.computeInstancePath( instance );
 		this.logger.fine( "Migrate " + instancePath + " in " + ma.getName() + " with decision of delete of root is " + deleteOldRoot + "." );
 		if( instance.getParent() != null ) {
-			MsgCmdInstanceMigrate message = new MsgCmdInstanceMigrate( instance, deleteOldRoot );
+			MsgCmdInstanceMigrate message = new MsgCmdInstanceMigrate( instance, destPath, deleteOldRoot );
 			send( ma, message, instance );
-			this.logger.fine( "A message was (or will be) sent to the agent to migrate " + instancePath + " in " + ma.getName() + " with decision of delete of root is " + deleteOldRoot + "." );
+			this.logger.fine( "A message was (or will be) sent to the agent to migrate " + instancePath + " in " + ma.getName() + " with decision and destPath are " + deleteOldRoot + " " + destPath + "." );
 
 		} else {
 			this.logger.fine( "Migrate action for " + instancePath + " is cancelled in " + ma.getName() + "." );

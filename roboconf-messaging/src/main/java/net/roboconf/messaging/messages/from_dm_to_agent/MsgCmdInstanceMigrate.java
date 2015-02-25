@@ -28,6 +28,7 @@ public class MsgCmdInstanceMigrate extends Message {
 
 	private static final long serialVersionUID = -8987925389702692849L;
 	private final String instancePath;
+	private final String destPath;
 	private final String deleteOldRoot;
 
 
@@ -39,6 +40,7 @@ public class MsgCmdInstanceMigrate extends Message {
 		super();
 		this.instancePath = instancePath;
 		this.deleteOldRoot = deleteOldRoot;
+		this.destPath = null;
 	}
 
 	/**
@@ -48,12 +50,30 @@ public class MsgCmdInstanceMigrate extends Message {
 	public MsgCmdInstanceMigrate( Instance instance, String deleteOldRoot ) {
 		this( InstanceHelpers.computeInstancePath( instance ), deleteOldRoot);
 	}
+	
+	/**
+	 * Constructor.
+	 * @param instancePath
+	 */
+	public MsgCmdInstanceMigrate( Instance instance, String destPath, String deleteOldRoot ) {
+		super();
+		this.instancePath = InstanceHelpers.computeInstancePath( instance );
+		this.deleteOldRoot = deleteOldRoot;
+		this.destPath = destPath;
+	}
 
 	/**
 	 * @return the instancePath
 	 */
 	public String getInstancePath() {
 		return this.instancePath;
+	}
+	
+	/**
+	 * @return the destPath
+	 */
+	public String getDestPath() {
+		return this.destPath;
 	}
 	
 	/**

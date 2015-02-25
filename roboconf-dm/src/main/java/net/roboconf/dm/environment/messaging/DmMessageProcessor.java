@@ -244,6 +244,7 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 	private void processMsgNotifInstanceBackedup( MsgNotifInstanceBackedup message ) {		// Linh Manh Pham
 
 		String instancePath = message.getInstancePath();
+		//String destPath = message.getDestPath();
 		String deleteOldRoot = message.getDeleteOldRoot();
 		ManagedApplication ma = Manager.INSTANCE.getAppNameToManagedApplication().get( message.getApplicationName());
 		Application app = ma != null ? ma.getApplication() : null;
@@ -260,8 +261,8 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 			this.logger.warning( sb.toString());
 
 		} else {
-			String instanceName = instance.getName();
-			String copyInstanceName = instanceName + "_migrated";
+			//String instanceName = instance.getName();
+			//String copyInstanceName = instanceName + "_migrated";
 			//Instance rootInstance = InstanceHelpers.findRootInstance(instance);
 			Instance rootCopy = new Instance();
 			if( instance.getParent() == null )
@@ -269,15 +270,15 @@ public class DmMessageProcessor extends AbstractMessageProcessor {
 			else {
 				if ( deleteOldRoot == null ) {	// only back up
 					this.logger.info( "Instance: " + instancePath + " was backed up succesfully." );
-				} else {	// for back up as a part of migration progress
+				} else if ( "-1".equals(deleteOldRoot) ) {	// replicate process
 					rootCopy = InstanceHelpers.duplicateAllInstancesOnTheInstancePathOf( instance, "_migrated" );
 					try {
 						Manager.INSTANCE.addInstance(ma, null, rootCopy);
-						Instance instanceCopy = InstanceHelpers.findInstanceByName(ma.getApplication(), copyInstanceName);
+						//Instance instanceCopy = InstanceHelpers.findInstanceByName(ma.getApplication(), copyInstanceName);
 						Manager.INSTANCE.deployAll(ma, rootCopy);
-						Manager.INSTANCE.restore(ma, instanceCopy, instancePath, deleteOldRoot);
-						Manager.INSTANCE.start(ma, instanceCopy);
-						this.logger.info( "A request to restore " + instancePath + " to " + InstanceHelpers.computeInstancePath(instanceCopy) + " was sent." );
+						//Manager.INSTANCE.restore(ma, instanceCopy, instancePath, deleteOldRoot);
+						Manager.INSTANCE.startAll(ma, rootCopy);
+						this.logger.info( "The request to replicate all instances in the " + instancePath + " to ... was sent." );
 					} catch (ImpossibleInsertionException e) {
 						this.logger.warning( "ImpossibleInsertionException. Duplicate instance failed!" );
 					} catch (IaasException e) {
