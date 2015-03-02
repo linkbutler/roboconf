@@ -51,7 +51,7 @@ public interface IApplicationWs {
 	 * Performs an action on an instance of an application.
 	 * @param applicationName the application name
 	 * @param action see {@link ApplicationAction}
-	 * @param instancePath the instance pat (not null)
+	 * @param instancePath the instance path (not null)
 	 * @return a response
 	 */
 	@POST

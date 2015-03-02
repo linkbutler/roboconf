@@ -21,11 +21,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import net.roboconf.core.RoboconfError;
 import net.roboconf.core.model.runtime.Application;
+import net.roboconf.core.model.runtime.Component;
 import net.roboconf.core.model.runtime.Instance;
 import net.roboconf.core.model.validators.RuntimeModelValidator;
 import net.roboconf.core.utils.Utils;
@@ -287,7 +289,47 @@ public final class InstanceHelpers {
 
 		return result;
 	}
+	
+	
+	/**
+	 * Finds all instancePaths where a given instance can be put on.
+	 * @param application an application (not null)
+	 * @param instancePath a instance path (not null)
+	 * @return a non-null list of instances
+	 */
+	public static List<String> findInstancePathsToPutAnInstance( Application application, Instance instanceToDuplicate ) {
 
+		List<String> result = new ArrayList<String> ();
+		Collection<Component> listAncestors = instanceToDuplicate.getComponent().getAncestors();
+		
+		for (Iterator iterator = listAncestors.iterator(); iterator.hasNext();) {
+	        Component candidateComp = (Component) iterator.next();
+	        
+	        List<Instance> listInst = new ArrayList<Instance> ();
+	        listInst = InstanceHelpers.findInstancesByComponentName( application, candidateComp.getName() );
+	        for (Iterator iterator1 = listInst.iterator(); iterator1.hasNext();) {
+		        Instance candidateInst = (Instance) iterator1.next();
+		        
+		        Collection<Instance> listChildren = candidateInst.getChildren();
+		        int i=1;
+		        for (Iterator iterator2 = listChildren.iterator(); iterator2.hasNext();) {
+			        Instance candidateChild = (Instance) iterator2.next();
+			        if ( candidateChild.getComponent().getName().equals( instanceToDuplicate.getComponent().getName() ) )
+			        	break;
+			        else {
+			        	if (i == listChildren.size() )
+			        	result.add( InstanceHelpers.computeInstancePath(candidateInst) );
+			        }
+			        i++;
+		        }
+		        
+	        }
+	        
+		}
+		
+		return result;
+	}
+	
 
 	/**
 	 * Finds the root instance for an instance.

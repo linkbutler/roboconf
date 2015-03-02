@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import javax.ws.rs.Path;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
@@ -62,63 +63,70 @@ public class ApplicationWs implements IApplicationWs {
 	public Response perform( String applicationName, String actionAS, String instancePath ) {
 
 		this.logger.fine( "Request: perform action '" + actionAS + "' in " + applicationName + ", instance " + instancePath + "." );
-		Response response;
+		Response response = null;
 		try {
 			ManagedApplication ma;
 			Instance instance;
 			ApplicationAction action = ApplicationAction.whichAction( actionAS );
 			if(( ma = Manager.INSTANCE.getAppNameToManagedApplication().get( applicationName )) == null )
-				response = Response.status( Status.NOT_FOUND ).entity( "Application " + applicationName + " does not exist." ).build();
+				return response = Response.status( Status.NOT_FOUND ).entity( "Application " + applicationName + " does not exist." ).build();
 
-			else if(( instance = InstanceHelpers.findInstanceByPath( ma.getApplication(), instancePath )) == null )
-				response = Response.status( Status.NOT_FOUND ).entity( "Instance " + instancePath + " was not found." ).build();
-
-			else if( action == ApplicationAction.DEPLOY ) {
-				if( instance.getParent() == null )
-					Manager.INSTANCE.deployRoot( ma, instance );
-				else
-					Manager.INSTANCE.deploy( ma, instance );
-				response = Response.ok().build();
-
-			} else if( action == ApplicationAction.START ) {
-				Manager.INSTANCE.start( ma, instance );
-				response = Response.ok().build();
-
-			} else if( action == ApplicationAction.STOP ) {
-				Manager.INSTANCE.stop( ma, instance );
-				response = Response.ok().build();
-
-			} else if( action == ApplicationAction.UNDEPLOY ) {
-				if( instance.getParent() == null )
-					Manager.INSTANCE.undeployRoot( ma, instance );
-				else
-					Manager.INSTANCE.undeploy( ma, instance );
-				response = Response.ok().build();
-
-			} else if( action == ApplicationAction.REMOVE ) {
-				Manager.INSTANCE.removeInstance( ma, instance );
-				response = Response.ok().build();
-
-			} else if( action == ApplicationAction.BACKUP ) {	// Linh Manh Pham
-				Manager.INSTANCE.backup( ma, instance );
-				response = Response.ok().build();
-
+			else if(( instance = InstanceHelpers.findInstanceByPath( ma.getApplication(), instancePath )) != null ) {
+				if( action == ApplicationAction.DEPLOY ) {
+					if( instance.getParent() == null )
+						Manager.INSTANCE.deployRoot( ma, instance );
+					else
+						Manager.INSTANCE.deploy( ma, instance );
+					return response = Response.ok().build();
+	
+				} else if( action == ApplicationAction.START ) {
+					Manager.INSTANCE.start( ma, instance );
+					return response = Response.ok().build();
+	
+				} else if( action == ApplicationAction.STOP ) {
+					Manager.INSTANCE.stop( ma, instance );
+					return response = Response.ok().build();
+	
+				} else if( action == ApplicationAction.UNDEPLOY ) {
+					if( instance.getParent() == null )
+						Manager.INSTANCE.undeployRoot( ma, instance );
+					else
+						Manager.INSTANCE.undeploy( ma, instance );
+					return response = Response.ok().build();
+	
+				} else if( action == ApplicationAction.REMOVE ) {
+					Manager.INSTANCE.removeInstance( ma, instance );
+					return response = Response.ok().build();
+	
+				} else if( action == ApplicationAction.BACKUP ) {	// Linh Manh Pham
+					Manager.INSTANCE.backup( ma, instance );
+					return response = Response.ok().build();
+				}
+				else if ( "list".equals(actionAS) ) {	//list where can put the instance
+					List<String> listInstances = InstanceHelpers.findInstancePathsToPutAnInstance( ma.getApplication(), instance );
+					return response = Response.status( Status.OK ).entity( listInstances.toString() ).build();
+				}
+			} else if (( instance = InstanceHelpers.findInstanceByPath( ma.getApplication(), instancePath )) == null ) { 
+				if( "countroot".equals(actionAS) ) {	// Linh Manh Pham
+					int result = ma.getApplication().getRootInstances().size();
+					return response = Response.status( Status.OK ).entity( Integer.toString( result ) ).build();
+				}
 			} else {
-				response = Response.status( Status.BAD_REQUEST ).entity( "Invalid action: " + actionAS ).build();
+				return response = Response.status( Status.BAD_REQUEST ).entity( "Invalid action: " + actionAS ).build();
 			}
 
 		} catch( UnauthorizedActionException e ) {
-			response = Response.status( Status.FORBIDDEN ).entity( e.getMessage()).build();
+			return response = Response.status( Status.FORBIDDEN ).entity( e.getMessage()).build();
 
 		} catch( IOException e ) {
-			response = Response.status( Status.FORBIDDEN ).entity( e.getMessage()).build();
+			return response = Response.status( Status.FORBIDDEN ).entity( e.getMessage()).build();
 
 		} catch( IaasException e ) {
-			response = Response.status( Status.FORBIDDEN ).entity( e.getMessage()).build();
+			return response = Response.status( Status.FORBIDDEN ).entity( e.getMessage()).build();
 
 		} catch( Exception e ) {
-			response = Response.status( Status.INTERNAL_SERVER_ERROR ).entity( e.getMessage()).build();
 			this.logger.finest( Utils.writeException( e ));
+			return response = Response.status( Status.INTERNAL_SERVER_ERROR ).entity( e.getMessage()).build();
 		}
 
 		return response;
