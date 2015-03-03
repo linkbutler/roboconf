@@ -101,11 +101,14 @@ public class ApplicationWs implements IApplicationWs {
 				} else if( action == ApplicationAction.BACKUP ) {	// Linh Manh Pham
 					Manager.INSTANCE.backup( ma, instance );
 					return response = Response.ok().build();
-				}
-				else if ( "list".equals(actionAS) ) {	//list where can put the instance
+				} else if ( "list".equals(actionAS) ) {	// list where can put the instance
 					List<String> listInstances = InstanceHelpers.findInstancePathsToPutAnInstance( ma.getApplication(), instance );
 					return response = Response.status( Status.OK ).entity( listInstances.toString() ).build();
+				} else if ( "getstate".equals(actionAS) ) {	// get state of an instance
+					String result = InstanceHelpers.findInstanceByPath( ma.getApplication(), instancePath).getStatus().name();
+					return response = Response.status( Status.OK ).entity( result ).build();
 				}
+				
 			} else if (( instance = InstanceHelpers.findInstanceByPath( ma.getApplication(), instancePath )) == null ) { 
 				if( "countroot".equals(actionAS) ) {	// Linh Manh Pham
 					int result = ma.getApplication().getRootInstances().size();
